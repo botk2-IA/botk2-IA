@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin — Botk2-IA</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .plan-free       { @apply bg-slate-100 text-slate-600; }
+    .plan-starter    { @apply bg-blue-100 text-blue-700; }
+    .plan-pro        { @apply bg-purple-100 text-purple-700; }
+    .plan-clinica    { @apply bg-amber-100 text-amber-700; }
+    .badge-active    { @apply bg-green-100 text-green-700; }
+    .badge-inactive  { @apply bg-red-100 text-red-600; }
+  </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+<!-- ── Top bar ── -->
+<header class="bg-slate-900 text-white px-6 py-4 flex items-center justify-between shadow-lg">
+  <div class="flex items-center gap-3">
+    <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
+      <svg viewBox="0 0 100 100" class="w-6 h-6">
+        <path d="M14,80 L28,49 L41,62 L56,17 L83,80 Z" fill="white"/>
+        <circle cx="56" cy="17" r="5" fill="#93C5FD"/>
+      </svg>
+    </div>
+    <div>
+      <span class="font-bold text-lg">Botk2-IA</span>
+      <span class="ml-2 text-xs bg-blue-600 px-2 py-0.5 rounded-full font-medium">Admin</span>
+    </div>
+  </div>
+  <div class="flex items-center gap-4">
+    <span class="text-slate-400 text-sm hidden sm:block">{{ today }}</span>
+    <a href="/admin/logout"
+       class="text-sm bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg transition-colors">
+      Cerrar sesión
+    </a>
+  </div>
+</header>
+
+<!-- ── Content ── -->
+<main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+
+  <!-- Global KPIs -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+      <p class="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Clínicas registradas</p>
+      <p class="text-3xl font-extrabold text-slate-800">{{ stats.total_clinics }}</p>
+      <p class="text-xs text-slate-400 mt-1">{{ stats.active_clinics }} activas</p>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+      <p class="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Total turnos</p>
+      <p class="text-3xl font-extrabold text-slate-800">{{ stats.total_appointments }}</p>
+      <p class="text-xs text-slate-400 mt-1">en toda la plataforma</p>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+      <p class="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Total pacientes</p>
+      <p class="text-3xl font-extrabold text-slate-800">{{ stats.total_patients }}</p>
+      <p class="text-xs text-slate-400 mt-1">registrados</p>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+      <p class="text-xs text-slate-500 font-medium uppercase tracking-wide mb-1">Planes pagos</p>
+      <p class="text-3xl font-extrabold text-slate-800">{{ stats.paid_clinics }}</p>
+      <p class="text-xs text-green-600 mt-1 font-medium">Starter + Pro + Clínica</p>
+    </div>
+
+  </div>
+
+  <!-- Distribución por plan -->
+  <div class="grid grid-cols-4 gap-3 mb-8">
+    {% for plan_name, count in stats.by_plan.items() %}
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm px-4 py-3 flex items-center justify-between">
+      <span class="text-sm font-medium text-slate-600 capitalize">{{ plan_name }}</span>
+      <span class="text-lg font-bold text-slate-800">{{ count }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Tabla de clínicas -->
+  <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+
+    <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+      <h2 class="font-bold text-slate-800">Todas las clínicas</h2>
+      <!-- Buscador -->
+      <form method="GET" action="/admin" class="flex gap-2">
+        <input type="text" name="q" value="{{ q }}"
+          placeholder="Buscar por nombre o email..."
+          class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        <button type="submit" class="bg-slate-700 hover:bg-slate-800 text-white text-sm px-3 py-1.5 rounded-lg transition-colors">
+          Buscar
+        </button>
+      </form>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-100">
+            <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Clínica</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Plan</th>
+            <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Pacientes</th>
+            <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Turnos</th>
+            <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Profesionales</th>
+            <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado</th>
+            <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Registrada</th>
+            <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-50">
+          {% for row in clinics %}
+          <tr class="hover:bg-slate-50 transition-colors">
+
+            <!-- Nombre + email -->
+            <td class="px-5 py-3.5">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span class="text-blue-600 font-bold text-sm">{{ row.clinic.name[0]|upper }}</span>
+                </div>
+                <div>
+                  <p class="font-semibold text-slate-800">{{ row.clinic.name }}</p>
+                  <p class="text-xs text-slate-400">{{ row.clinic.email }}</p>
+                </div>
+              </div>
+            </td>
+
+            <!-- Plan badge + selector -->
+            <td class="px-4 py-3.5">
+              <form method="POST" action="/admin/clinics/{{ row.clinic.id }}/plan" class="flex items-center gap-2">
+                <select name="plan" onchange="this.form.submit()"
+                  class="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  {% for p in ["free", "starter", "pro", "clinica"] %}
+                  <option value="{{ p }}" {% if row.clinic.plan == p %}selected{% endif %}>
+                    {{ p | capitalize }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </form>
+            </td>
+
+            <!-- Conteos -->
+            <td class="px-4 py-3.5 text-center">
+              <span class="font-semibold text-slate-700">{{ row.patients }}</span>
+            </td>
+            <td class="px-4 py-3.5 text-center">
+              <span class="font-semibold text-slate-700">{{ row.appointments }}</span>
+            </td>
+            <td class="px-4 py-3.5 text-center">
+              <span class="font-semibold text-slate-700">{{ row.professionals }}</span>
+            </td>
+
+            <!-- Estado activo/inactivo -->
+            <td class="px-4 py-3.5 text-center">
+              {% if row.clinic.active %}
+              <span class="inline-flex items-center gap-1 bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                <span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Activa
+              </span>
+              {% else %}
+              <span class="inline-flex items-center gap-1 bg-red-100 text-red-600 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                <span class="w-1.5 h-1.5 bg-red-400 rounded-full"></span> Inactiva
+              </span>
+              {% endif %}
+            </td>
+
+            <!-- Fecha de registro -->
+            <td class="px-4 py-3.5 text-slate-500 text-xs whitespace-nowrap">
+              {% if row.clinic.created_at %}
+                {{ row.clinic.created_at.strftime('%d/%m/%Y') }}
+              {% else %}—{% endif %}
+            </td>
+
+            <!-- Acciones -->
+            <td class="px-4 py-3.5">
+              <div class="flex items-center justify-center gap-1.5">
+                <!-- Ver dashboard como esta clínica -->
+                <a href="/admin/login-as/{{ row.clinic.id }}"
+                   title="Ingresar como esta clínica"
+                   class="bg-blue-50 hover:bg-blue-100 text-blue-600 font-medium text-xs px-2.5 py-1.5 rounded-lg transition-colors">
+                  👁 Ver
+                </a>
+                <!-- Activar / Desactivar -->
+                <form method="POST" action="/admin/clinics/{{ row.clinic.id }}/toggle">
+                  <button type="submit" title="{{ 'Desactivar' if row.clinic.active else 'Activar' }}"
+                    class="{{ 'bg-red-50 hover:bg-red-100 text-red-600' if row.clinic.active else 'bg-green-50 hover:bg-green-100 text-green-600' }} font-medium text-xs px-2.5 py-1.5 rounded-lg transition-colors">
+                    {{ '⏸ Desactivar' if row.clinic.active else '▶ Activar' }}
+                  </button>
+                </form>
+              </div>
+            </td>
+
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="8" class="px-5 py-12 text-center text-slate-400">
+              No hay clínicas que coincidan con la búsqueda.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Footer de tabla -->
+    <div class="px-6 py-3 border-t border-slate-100 text-xs text-slate-400">
+      Mostrando {{ clinics|length }} clínica{{ 's' if clinics|length != 1 else '' }}
+    </div>
+
+  </div>
+
+  <!-- Accesos rápidos -->
+  <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+      <h3 class="font-semibold text-slate-800 mb-3 text-sm">⚡ Accesos rápidos</h3>
+      <ul class="space-y-2 text-sm">
+        <li>
+          <a href="/" class="text-blue-600 hover:underline">→ Landing page pública</a>
+        </li>
+        <li>
+          <a href="/register" class="text-blue-600 hover:underline">→ Registrar nueva clínica</a>
+        </li>
+        <li>
+          <a href="/admin?q=" class="text-blue-600 hover:underline">→ Ver todas las clínicas</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+      <h3 class="font-semibold text-slate-800 mb-3 text-sm">📊 Por plan</h3>
+      <div class="space-y-1.5">
+        {% for plan_name, count in stats.by_plan.items() %}
+        <div class="flex items-center justify-between">
+          <span class="text-xs text-slate-500 capitalize">{{ plan_name }}</span>
+          <div class="flex items-center gap-2">
+            <div class="h-1.5 rounded-full bg-blue-500" style="width: {{ [count * 12, 80]|min }}px"></div>
+            <span class="text-xs font-semibold text-slate-700 w-4 text-right">{{ count }}</span>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl border border-slate-100 shadow-sm p-5">
+      <h3 class="font-semibold text-slate-800 mb-3 text-sm">🆕 Registros recientes</h3>
+      <div class="space-y-2">
+        {% for row in recent_clinics %}
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <span class="text-blue-600 font-bold text-xs">{{ row.clinic.name[0]|upper }}</span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <p class="text-xs font-medium text-slate-700 truncate">{{ row.clinic.name }}</p>
+            <p class="text-xs text-slate-400">
+              {% if row.clinic.created_at %}{{ row.clinic.created_at.strftime('%d/%m/%Y') }}{% endif %}
+            </p>
+          </div>
+          <span class="text-xs font-semibold
+            {% if row.clinic.plan == 'free' %}text-slate-500
+            {% elif row.clinic.plan == 'pro' %}text-purple-600
+            {% elif row.clinic.plan == 'clinica' %}text-amber-600
+            {% else %}text-blue-600{% endif %}">
+            {{ row.clinic.plan | capitalize }}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+
+</main>
+
+</body>
+</html>
