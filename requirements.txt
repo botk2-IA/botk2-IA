@@ -1,0 +1,23 @@
+# Web framework
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+
+# Base de datos
+sqlalchemy==2.0.30
+psycopg2-binary==2.9.9      # PostgreSQL (Railway en producción)
+
+# Templates y archivos
+jinja2==3.1.4
+python-multipart==0.0.9
+aiofiles==23.2.1
+
+# Auth y JWT
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# HTTP cliente
+httpx==0.27.0
+
+# Pagos
+mercadopago==2.2.2           # MercadoPago (Argentina y LATAM)
+stripe==9.12.0               # Stripe (internacional)

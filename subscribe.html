@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Contratar {{ plan_info.name }} — Botk2-IA</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center px-4">
+<div class="w-full max-w-md">
+
+  <!-- Logo -->
+  <div class="text-center mb-8">
+    <div class="inline-flex items-center gap-2 mb-2">
+      <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
+        <svg viewBox="0 0 100 100" class="w-6 h-6">
+          <path d="M14,80 L28,49 L41,62 L56,17 L83,80 Z" fill="white"/>
+          <circle cx="56" cy="17" r="5" fill="#93C5FD"/>
+        </svg>
+      </div>
+      <span class="text-white font-bold text-xl">Botk2-IA</span>
+    </div>
+    <p class="text-slate-400 text-sm">Elegí cómo querés pagar</p>
+  </div>
+
+  <!-- Plan card -->
+  <div class="bg-white rounded-2xl shadow-2xl overflow-hidden mb-6">
+
+    <!-- Header del plan -->
+    <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 text-white">
+      <p class="text-blue-200 text-xs font-semibold uppercase tracking-widest mb-1">Plan seleccionado</p>
+      <div class="flex items-end gap-2">
+        <span class="text-4xl font-extrabold">${{ plan_info.price_usd }}</span>
+        <span class="text-blue-200 mb-1">USD / mes</span>
+      </div>
+      <p class="font-bold text-lg mt-0.5">{{ plan_info.name }}</p>
+    </div>
+
+    <!-- Clinica actual -->
+    <div class="px-6 py-4 border-b border-slate-100 bg-slate-50">
+      <p class="text-xs text-slate-500 mb-0.5">Cuenta</p>
+      <p class="font-semibold text-slate-800">{{ clinic.name }}</p>
+      <p class="text-sm text-slate-500">{{ clinic.email }}</p>
+    </div>
+
+    <!-- Métodos de pago -->
+    <div class="px-6 py-6 space-y-3">
+      <p class="text-sm font-semibold text-slate-700 mb-4">¿Cómo querés pagar?</p>
+
+      <!-- MercadoPago -->
+      <form method="POST" action="/subscribe/{{ plan }}/mercadopago">
+        <button type="submit"
+          class="w-full flex items-center gap-4 border-2 border-blue-100 hover:border-blue-400 hover:bg-blue-50 rounded-xl px-4 py-4 transition-all group">
+          <div class="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-black text-lg">
+            MP
+          </div>
+          <div class="text-left flex-1">
+            <p class="font-semibold text-slate-800">MercadoPago</p>
+            <p class="text-xs text-slate-500">Argentina y LATAM · Tarjeta, débito, efectivo</p>
+          </div>
+          <svg class="w-5 h-5 text-slate-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </form>
+
+      <!-- Stripe -->
+      <form method="POST" action="/subscribe/{{ plan }}/stripe">
+        <button type="submit"
+          class="w-full flex items-center gap-4 border-2 border-slate-100 hover:border-purple-400 hover:bg-purple-50 rounded-xl px-4 py-4 transition-all group">
+          <div class="w-12 h-12 bg-gradient-to-br from-purple-600 to-indigo-600 rounded-xl flex items-center justify-center flex-shrink-0">
+            <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/>
+            </svg>
+          </div>
+          <div class="text-left flex-1">
+            <p class="font-semibold text-slate-800">Stripe</p>
+            <p class="text-xs text-slate-500">Internacional · Visa, Mastercard, Amex</p>
+          </div>
+          <svg class="w-5 h-5 text-slate-400 group-hover:text-purple-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+          </svg>
+        </button>
+      </form>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 pb-5 text-center">
+      <p class="text-xs text-slate-400">🔒 Pago 100% seguro · Podés cancelar cuando quieras</p>
+    </div>
+  </div>
+
+  <div class="text-center">
+    <a href="/dashboard" class="text-slate-400 hover:text-white text-sm transition-colors">← Volver al panel</a>
+  </div>
+
+</div>
+</body>
+</html>

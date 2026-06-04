@@ -1,0 +1,18 @@
+# Entorno Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+
+# Base de datos local
+*.db
+*.db-journal
+
+# Variables de entorno reales (nunca subir al repositorio)
+.env
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db

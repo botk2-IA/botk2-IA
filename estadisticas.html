@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Estadísticas — Clínica San Martín</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .sidebar-link { display:flex; align-items:center; gap:12px; padding:10px 16px; border-radius:8px; color:#cbd5e1; font-size:14px; font-weight:500; text-decoration:none; transition:all .2s; }
+    .sidebar-link:hover { background:#334155; color:white; }
+    .sidebar-link.active { background:#2563eb; color:white; }
+    .card { background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.08); border:1px solid #f1f5f9; padding:24px; }
+    .stat-card { background:white; border-radius:12px; box-shadow:0 1px 3px rgba(0,0,0,.08); border:1px solid #f1f5f9; padding:20px; }
+  </style>
+</head>
+<body style="background:#f8fafc; color:#1e293b;">
+<div style="display:flex; height:100vh; overflow:hidden;">
+
+  <!-- Sidebar -->
+  <aside style="width:240px; background:#1e293b; display:flex; flex-direction:column; flex-shrink:0;">
+    <div style="padding:20px; border-bottom:1px solid #334155;">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:36px;height:36px;border-radius:10px;flex-shrink:0">
+          <rect width="100" height="100" rx="22" ry="22" fill="#042C53"/>
+          <path d="M14,80 L28,49 L41,62 L56,17 L83,80 Z" fill="white"/>
+          <circle cx="56" cy="17" r="5.5" fill="#378ADD"/>
+          <circle cx="28" cy="49" r="3.5" fill="#85B7EB"/>
+        </svg>
+        <div>
+          <p style="font-weight:700;font-size:14px;"><span style="color:#e2eaf5">Bot</span><span style="color:#85B7EB">k2</span><span style="color:#378ADD">-IA</span></p>
+          <p style="color:#94a3b8;font-size:11px;">Clínica San Martín</p>
+        </div>
+      </div>
+    </div>
+    <nav style="flex:1; padding:16px 12px; display:flex; flex-direction:column; gap:4px;">
+      <a href="demo_clinica.html" class="sidebar-link">
+        <svg style="width:16px;height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        Panel principal
+      </a>
+      <a href="demo_clinica.html" class="sidebar-link">
+        <svg style="width:16px;height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        Turnos
+      </a>
+      <a href="demo_clinica.html" class="sidebar-link">
+        <svg style="width:16px;height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Pacientes
+      </a>
+      <a href="estadisticas.html" class="sidebar-link active">
+        <svg style="width:16px;height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Estadísticas
+      </a>
+      <a href="demo_clinica.html" class="sidebar-link">
+        <svg style="width:16px;height:16px;" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg>
+        Bot WhatsApp
+        <span style="margin-left:auto;background:#22c55e;color:white;font-size:10px;border-radius:999px;padding:2px 6px;">DEMO</span>
+      </a>
+      <a href="demo_clinica.html" class="sidebar-link">
+        <svg style="width:16px;height:16px;" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        Profesionales
+      </a>
+    </nav>
+    <div style="padding:16px; border-top:1px solid #334155;">
+      <div style="background:rgba(37,99,235,.2);border-radius:8px;padding:12px;text-align:center;">
+        <p style="color:#93c5fd;font-size:11px;font-weight:700;text-transform:uppercase;">Plan Starter</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main style="flex:1; overflow-y:auto;">
+    <header style="background:white;border-bottom:1px solid #e2e8f0;padding:12px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10;">
+      <div>
+        <h1 style="font-size:18px;font-weight:700;">Estadísticas</h1>
+        <p style="font-size:12px;color:#94a3b8;">Resumen del año 2025</p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <select id="yearSelect" onchange="render()" style="border:1px solid #e2e8f0;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;background:white;cursor:pointer;">
+          <option>2025</option><option>2024</option>
+        </select>
+      </div>
+    </header>
+
+    <div style="padding:24px;display:flex;flex-direction:column;gap:20px;">
+
+      <!-- KPIs principales -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;">
+        <div class="stat-card">
+          <p style="font-size:13px;color:#64748b;font-weight:500;margin-bottom:8px;">Mejor mes</p>
+          <p style="font-size:28px;font-weight:800;color:#2563eb;">Marzo</p>
+          <p style="font-size:12px;color:#94a3b8;margin-top:4px;">127 turnos · récord del año</p>
+          <p style="font-size:12px;color:#16a34a;margin-top:2px;">↑ 23% vs febrero</p>
+        </div>
+        <div class="stat-card">
+          <p style="font-size:13px;color:#64748b;font-weight:500;margin-bottom:8px;">Pacientes nuevos</p>
+          <p style="font-size:28px;font-weight:800;color:#9333ea;">+47</p>
+          <p style="font-size:12px;color:#94a3b8;margin-top:4px;">este año · 8 este mes</p>
+          <p style="font-size:12px;color:#16a34a;margin-top:2px;">↑ 12% vs año anterior</p>
+        </div>
+        <div class="stat-card">
+          <p style="font-size:13px;color:#64748b;font-weight:500;margin-bottom:8px;">Tasa de asistencia</p>
+          <p style="font-size:28px;font-weight:800;color:#16a34a;">87%</p>
+          <p style="font-size:12px;color:#94a3b8;margin-top:4px;">de los turnos se presentan</p>
+          <p style="font-size:12px;color:#16a34a;margin-top:2px;">↑ 15% con recordatorios WA</p>
+        </div>
+        <div class="stat-card">
+          <p style="font-size:13px;color:#64748b;font-weight:500;margin-bottom:8px;">Total turnos año</p>
+          <p style="font-size:28px;font-weight:800;color:#f97316;">842</p>
+          <p style="font-size:12px;color:#94a3b8;margin-top:4px;">en lo que va del año</p>
+          <p style="font-size:12px;color:#16a34a;margin-top:2px;">↑ 31% vs 2024</p>
+        </div>
+      </div>
+
+      <!-- Gráfico de turnos por mes -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div>
+            <h3 style="font-weight:700;font-size:16px;">Turnos por mes</h3>
+            <p style="font-size:12px;color:#94a3b8;">Comparativo mensual 2025 · pasá el mouse para ver detalle</p>
+          </div>
+          <div style="display:flex;gap:12px;font-size:12px;">
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#2563eb;border-radius:3px;display:inline-block;"></span> Confirmados</span>
+            <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;background:#f97316;border-radius:3px;display:inline-block;"></span> Cancelados</span>
+          </div>
+        </div>
+        <div id="barChart" style="display:flex;align-items:flex-end;gap:6px;height:200px;padding-bottom:24px;position:relative;border-bottom:2px solid #f1f5f9;"></div>
+        <div id="barLabels" style="display:flex;gap:6px;margin-top:8px;"></div>
+        <div id="barTooltip" style="display:none;position:fixed;background:#1e293b;color:white;border-radius:8px;padding:8px 12px;font-size:12px;pointer-events:none;z-index:100;box-shadow:0 4px 12px rgba(0,0,0,.2);"></div>
+      </div>
+
+      <!-- Obras sociales / Prepagas -->
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+          <div>
+            <h3 style="font-weight:700;font-size:16px;">Obras sociales / Prepagas</h3>
+            <p style="font-size:12px;color:#94a3b8;">Distribución de pacientes por cobertura médica</p>
+          </div>
+          <span style="background:#eef2ff;color:#4f46e5;font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;">247 pacientes</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+          <div id="obraChart" style="display:flex;flex-direction:column;gap:12px;"></div>
+          <div id="obraRanking" style="display:flex;flex-direction:column;gap:8px;justify-content:center;"></div>
+        </div>
+      </div>
+
+      <!-- Fila: Pacientes nuevos + Especialidades -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+        <!-- Pacientes nuevos por mes -->
+        <div class="card">
+          <h3 style="font-weight:700;font-size:16px;margin-bottom:4px;">Pacientes nuevos por mes</h3>
+          <p style="font-size:12px;color:#94a3b8;margin-bottom:20px;">Incorporaciones al sistema</p>
+          <div id="newPatientsChart" style="display:flex;align-items:flex-end;gap:4px;height:120px;border-bottom:2px solid #f1f5f9;padding-bottom:8px;"></div>
+          <div id="newPatientsLabels" style="display:flex;gap:4px;margin-top:6px;"></div>
+        </div>
+
+        <!-- Turnos por especialidad -->
+        <div class="card">
+          <h3 style="font-weight:700;font-size:16px;margin-bottom:4px;">Turnos por especialidad</h3>
+          <p style="font-size:12px;color:#94a3b8;margin-bottom:20px;">Distribución del año</p>
+          <div id="specialtyChart" style="display:flex;flex-direction:column;gap:10px;"></div>
+        </div>
+      </div>
+
+      <!-- Tasa de ausentismo y días más ocupados -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+        <!-- Ausentismo mensual -->
+        <div class="card">
+          <h3 style="font-weight:700;font-size:16px;margin-bottom:4px;">Ausentismo mensual</h3>
+          <p style="font-size:12px;color:#94a3b8;margin-bottom:20px;">% de turnos que no se presentaron</p>
+          <div id="absenceChart" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+
+        <!-- Días más ocupados -->
+        <div class="card">
+          <h3 style="font-weight:700;font-size:16px;margin-bottom:4px;">Días más ocupados</h3>
+          <p style="font-size:12px;color:#94a3b8;margin-bottom:20px;">Promedio de turnos por día de la semana</p>
+          <div id="daysChart" style="display:flex;align-items:flex-end;gap:8px;height:120px;border-bottom:2px solid #f1f5f9;padding-bottom:8px;"></div>
+          <div id="daysLabels" style="display:flex;gap:8px;margin-top:6px;"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+const MONTHS_SHORT = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+const monthlyData = [82,103,127,95,110,88,76,99,115,92,null,null];
+const cancelledData = [8,12,15,9,11,7,6,10,14,8,null,null];
+const newPatients = [5,7,9,4,8,5,3,6,8,4,null,null];
+const absenceRate = [9,11,12,9,10,8,8,10,12,9,null,null];
+
+const obrasData = [
+  {name:'OSDE 210',    count:78, color:'#6366f1'},
+  {name:'Swiss Medical',count:61,color:'#3b82f6'},
+  {name:'PAMI',        count:54, color:'#0ea5e9'},
+  {name:'Galeno',      count:32, color:'#10b981'},
+  {name:'IOMA',        count:14, color:'#f59e0b'},
+  {name:'Particular',  count:8,  color:'#94a3b8'},
+];
+const specialties = [
+  {name:'Cardiología', count:234, color:'#2563eb'},
+  {name:'Kinesiología', count:198, color:'#9333ea'},
+  {name:'Odontología', count:215, color:'#16a34a'},
+  {name:'Psicología', count:120, color:'#f97316'},
+  {name:'Clínica Médica', count:75, color:'#0891b2'},
+];
+const daysData = [2, 8, 9, 8, 9, 7, 3];
+const daysLabels = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+
+function render(){
+  renderBarChart();
+  renderNewPatients();
+  renderSpecialties();
+  renderAbsence();
+  renderDays();
+  renderObras();
+}
+
+function renderBarChart(){
+  const data = monthlyData.filter(x=>x!==null);
+  const cancelled = cancelledData.filter(x=>x!==null);
+  const max = Math.max(...data);
+  const chart = document.getElementById('barChart');
+  const labels = document.getElementById('barLabels');
+  const tooltip = document.getElementById('barTooltip');
+  const today = new Date();
+  const currentMonth = today.getMonth();
+
+  chart.innerHTML = '';
+  labels.innerHTML = '';
+
+  data.forEach((val,i)=>{
+    const isCurrentMonth = i === currentMonth;
+    const isBest = val === Math.max(...data);
+    const confHeight = Math.round((val/max)*170);
+    const cancHeight = Math.round((cancelled[i]/max)*170);
+    const confirmed = val - cancelled[i];
+    const pct = Math.round(cancelled[i]/val*100);
+
+    const col = document.createElement('div');
+    col.style.cssText = `flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative;cursor:pointer;`;
+    col.innerHTML = `
+      <span style="font-size:10px;font-weight:800;color:${isBest?'#d97706':isCurrentMonth?'#2563eb':'#64748b'};">${val}${isBest?' ⭐':''}</span>
+      <div style="width:100%;display:flex;flex-direction:column;align-items:center;gap:1px;position:relative;">
+        ${isCurrentMonth?`<div style="position:absolute;top:-6px;left:50%;transform:translateX(-50%);width:4px;height:4px;background:#2563eb;border-radius:50%;"></div>`:''}
+        <div style="width:80%;height:${confHeight}px;background:${isBest?'#d97706':isCurrentMonth?'#1d4ed8':'#2563eb'};border-radius:4px 4px 0 0;transition:height .5s;box-shadow:${isBest?'0 2px 8px rgba(217,119,6,.4)':'none'};"></div>
+        <div style="width:80%;height:${cancHeight}px;background:${isCurrentMonth?'#ea580c':'#f97316'};border-radius:0 0 4px 4px;transition:height .5s;opacity:0.85;"></div>
+      </div>`;
+
+    col.addEventListener('mouseenter', e=>{
+      tooltip.style.display = 'block';
+      tooltip.innerHTML = `<strong>${MONTHS_SHORT[i]}</strong><br>Total: ${val}<br>Confirmados: ${confirmed}<br>Cancelados: ${cancelled[i]} (${pct}%)`;
+    });
+    col.addEventListener('mousemove', e=>{
+      tooltip.style.left = (e.clientX+12)+'px';
+      tooltip.style.top = (e.clientY-40)+'px';
+    });
+    col.addEventListener('mouseleave', ()=>{ tooltip.style.display='none'; });
+
+    chart.appendChild(col);
+
+    const lbl = document.createElement('div');
+    lbl.style.cssText = `flex:1;text-align:center;font-size:11px;color:${isCurrentMonth?'#2563eb':'#94a3b8'};font-weight:${isCurrentMonth?'700':'400'};`;
+    lbl.textContent = MONTHS_SHORT[i];
+    labels.appendChild(lbl);
+  });
+}
+
+function renderObras(){
+  const total = obrasData.reduce((s,o)=>s+o.count,0);
+  const chart = document.getElementById('obraChart');
+  const ranking = document.getElementById('obraRanking');
+  if(!chart||!ranking) return;
+
+  chart.innerHTML = obrasData.map(o=>`
+    <div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span style="font-size:13px;font-weight:600;color:#1e293b;display:flex;align-items:center;gap:6px;">
+          <span style="width:10px;height:10px;border-radius:50%;background:${o.color};display:inline-block;"></span>
+          ${o.name}
+        </span>
+        <span style="font-size:13px;font-weight:700;color:${o.color};">${o.count} <span style="color:#94a3b8;font-weight:400;">(${Math.round(o.count/total*100)}%)</span></span>
+      </div>
+      <div style="background:#f1f5f9;border-radius:999px;height:10px;">
+        <div style="background:${o.color};height:10px;border-radius:999px;width:${Math.round(o.count/obrasData[0].count*100)}%;transition:width .5s;"></div>
+      </div>
+    </div>`).join('');
+
+  ranking.innerHTML = obrasData.map((o,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:10px;background:${i===0?o.color+'18':'#f8fafc'};border:1px solid ${i===0?o.color+'40':'#f1f5f9'};">
+      <span style="width:22px;height:22px;border-radius:50%;background:${o.color}22;color:${o.color};font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;">${i+1}</span>
+      <span style="font-size:13px;font-weight:600;color:#1e293b;flex:1;">${o.name}</span>
+      <span style="font-size:14px;font-weight:800;color:${o.color};">${o.count}</span>
+      ${i===0?`<span style="font-size:10px;background:${o.color};color:white;padding:2px 6px;border-radius:999px;font-weight:700;">1°</span>`:''}
+    </div>`).join('');
+}
+
+function renderNewPatients(){
+  const data = newPatients.filter(x=>x!==null);
+  const max = Math.max(...data);
+  const chart = document.getElementById('newPatientsChart');
+  const labels = document.getElementById('newPatientsLabels');
+  chart.innerHTML = '';
+  labels.innerHTML = '';
+  data.forEach((val,i)=>{
+    const h = Math.round((val/max)*100);
+    const col = document.createElement('div');
+    col.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;';
+    col.innerHTML = `<span style="font-size:10px;font-weight:700;color:#9333ea;">${val}</span><div style="width:80%;height:${h}px;background:#9333ea;border-radius:4px;opacity:0.8;"></div>`;
+    chart.appendChild(col);
+    const lbl = document.createElement('div');
+    lbl.style.cssText = 'flex:1;text-align:center;font-size:10px;color:#94a3b8;';
+    lbl.textContent = MONTHS_SHORT[i];
+    labels.appendChild(lbl);
+  });
+}
+
+function renderSpecialties(){
+  const total = specialties.reduce((a,b)=>a+b.count,0);
+  const container = document.getElementById('specialtyChart');
+  container.innerHTML = specialties.map(s=>`
+    <div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span style="font-size:13px;font-weight:600;color:#1e293b;">${s.name}</span>
+        <span style="font-size:13px;font-weight:700;color:${s.color};">${s.count} <span style="color:#94a3b8;font-weight:400;">(${Math.round(s.count/total*100)}%)</span></span>
+      </div>
+      <div style="background:#f1f5f9;border-radius:999px;height:8px;">
+        <div style="background:${s.color};height:8px;border-radius:999px;width:${Math.round(s.count/specialties[0].count*100)}%;transition:width .5s;"></div>
+      </div>
+    </div>`).join('');
+}
+
+function renderAbsence(){
+  const data = absenceRate.filter(x=>x!==null);
+  const container = document.getElementById('absenceChart');
+  container.innerHTML = data.map((val,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:12px;color:#64748b;width:28px;flex-shrink:0;">${MONTHS_SHORT[i]}</span>
+      <div style="flex:1;background:#f1f5f9;border-radius:999px;height:8px;">
+        <div style="background:${val>12?'#ef4444':val>9?'#f97316':'#22c55e'};height:8px;border-radius:999px;width:${val*5}%;"></div>
+      </div>
+      <span style="font-size:12px;font-weight:700;color:${val>12?'#ef4444':val>9?'#f97316':'#16a34a'};width:30px;text-align:right;">${val}%</span>
+    </div>`).join('');
+}
+
+function renderDays(){
+  const max = Math.max(...daysData);
+  const chart = document.getElementById('daysChart');
+  const labels = document.getElementById('daysLabels');
+  chart.innerHTML = '';
+  labels.innerHTML = '';
+  daysData.forEach((val,i)=>{
+    const h = Math.round((val/max)*100);
+    const isWeekend = i===0||i===6;
+    const col = document.createElement('div');
+    col.style.cssText = 'flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;';
+    col.innerHTML = `<span style="font-size:10px;font-weight:700;color:#64748b;">${val}</span><div style="width:80%;height:${h}px;background:${isWeekend?'#e2e8f0':'#2563eb'};border-radius:4px;opacity:${isWeekend?0.5:0.85};"></div>`;
+    chart.appendChild(col);
+    const lbl = document.createElement('div');
+    lbl.style.cssText = `flex:1;text-align:center;font-size:11px;color:${isWeekend?'#cbd5e1':'#64748b'};`;
+    lbl.textContent = daysLabels[i];
+    labels.appendChild(lbl);
+  });
+}
+
+render();
+</script>
+</body>
+</html>

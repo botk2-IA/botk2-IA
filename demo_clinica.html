@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Demo — Centro Médico Integral · Botk2-IA</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .nav-item { display:flex; align-items:center; gap:.75rem; padding:.6rem .75rem; border-radius:.5rem; font-size:.875rem; font-weight:500; color:#94a3b8; cursor:pointer; transition:all .15s; }
+  .nav-item:hover { background:#1e293b; color:#e2e8f0; }
+  .nav-item.active { background:#1d4ed8; color:white; }
+  .badge-confirmed { display:inline-block; background:#dcfce7; color:#15803d; font-size:.7rem; font-weight:700; padding:.15rem .55rem; border-radius:9999px; }
+  .badge-pending   { display:inline-block; background:#fef9c3; color:#a16207; font-size:.7rem; font-weight:700; padding:.15rem .55rem; border-radius:9999px; }
+  .badge-cancelled { display:inline-block; background:#fee2e2; color:#b91c1c; font-size:.7rem; font-weight:700; padding:.15rem .55rem; border-radius:9999px; }
+  .badge-completed { display:inline-block; background:#f1f5f9; color:#64748b; font-size:.7rem; font-weight:700; padding:.15rem .55rem; border-radius:9999px; }
+  .stat-card { background:white; border-radius:.75rem; border:1px solid #f1f5f9; box-shadow:0 1px 3px rgba(0,0,0,.07); padding:1.25rem; }
+  .card { background:white; border-radius:.75rem; border:1px solid #f1f5f9; box-shadow:0 1px 3px rgba(0,0,0,.07); padding:1.25rem; }
+  .btn-primary { display:inline-block; background:#2563eb; color:white; font-size:.8rem; font-weight:600; padding:.45rem 1rem; border-radius:.5rem; cursor:pointer; border:none; transition:background .15s; }
+  .btn-primary:hover { background:#1d4ed8; }
+  .btn-outline { display:inline-block; border:1px solid #cbd5e1; color:#475569; font-size:.8rem; font-weight:500; padding:.4rem .9rem; border-radius:.5rem; cursor:pointer; background:white; transition:all .15s; }
+  .btn-outline:hover { background:#f8fafc; border-color:#94a3b8; }
+  .btn-success { background:#dcfce7; color:#15803d; font-size:.75rem; font-weight:600; padding:.3rem .6rem; border-radius:.4rem; cursor:pointer; border:none; }
+  .btn-danger  { background:#fee2e2; color:#b91c1c; font-size:.75rem; font-weight:600; padding:.3rem .6rem; border-radius:.4rem; cursor:pointer; border:none; }
+  .form-label { display:block; font-size:.8rem; font-weight:600; color:#374151; margin-bottom:.3rem; }
+  .form-input { width:100%; border:1px solid #d1d5db; border-radius:.5rem; padding:.5rem .75rem; font-size:.875rem; outline:none; transition:box-shadow .15s; }
+  .form-input:focus { border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.15); }
+  .modal-overlay { position:fixed; inset:0; background:rgba(15,23,42,.5); display:flex; align-items:center; justify-content:center; z-index:999; }
+  .modal-box { background:white; border-radius:1rem; box-shadow:0 25px 60px rgba(0,0,0,.3); width:100%; max-width:520px; max-height:90vh; overflow-y:auto; }
+</style>
+</head>
+<body class="bg-slate-50 h-screen overflow-hidden">
+
+<div class="flex h-screen">
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="w-56 bg-slate-900 flex flex-col flex-shrink-0 overflow-y-auto">
+  <div class="px-4 py-5 border-b border-slate-700">
+    <div class="flex items-center gap-2 mb-3">
+      <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+        <svg viewBox="0 0 100 100" class="w-5 h-5"><path d="M14,80 L28,49 L41,62 L56,17 L83,80 Z" fill="white"/><circle cx="56" cy="17" r="5" fill="#93C5FD"/></svg>
+      </div>
+      <span class="font-bold text-white text-sm">Botk2-IA</span>
+    </div>
+    <div class="bg-slate-800 rounded-xl p-3">
+      <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mb-2">
+        <span class="text-blue-600 font-extrabold text-lg">C</span>
+      </div>
+      <p class="text-white text-xs font-semibold">Centro Médico Integral</p>
+      <p class="text-slate-400 text-xs">4 especialidades · 6 prof.</p>
+    </div>
+  </div>
+  <nav class="flex-1 py-4 px-3 space-y-1">
+    <div class="nav-item active" id="nav-dashboard" onclick="navigate('dashboard')">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" id="nav-agenda" onclick="navigate('agenda')">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      Agenda
+    </div>
+    <div class="nav-item" id="nav-patients" onclick="navigate('patients')">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Pacientes
+    </div>
+    <div class="nav-item" id="nav-professionals" onclick="navigate('professionals')">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      Profesionales
+    </div>
+    <div class="nav-item" id="nav-stats" onclick="navigate('stats')">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      Estadísticas
+    </div>
+    <div class="nav-item" id="nav-reminders" onclick="navigate('reminders')">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+      Recordatorios
+    </div>
+    <div class="nav-item" id="nav-bot" onclick="navigate('bot')">
+      <svg class="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg>
+      Bot WhatsApp
+    </div>
+    <div class="nav-item" id="nav-settings" onclick="navigate('settings')">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Configuración
+    </div>
+  </nav>
+  <div class="px-4 py-4 border-t border-slate-700">
+    <div class="bg-amber-900 rounded-lg px-3 py-2.5">
+      <p class="text-xs text-amber-300 font-semibold">Plan Clínica</p>
+      <p class="text-xs text-slate-400 mt-0.5">Multi-profesional · Ilimitado</p>
+    </div>
+    <p class="text-xs text-slate-500 mt-3 text-center">Demo · <a href="https://botk2ia.netlify.app" target="_blank" class="text-blue-400 hover:underline">botk2ia.netlify.app</a></p>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<div class="flex-1 flex flex-col overflow-hidden">
+  <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+    <div>
+      <h1 id="page-title" class="font-bold text-slate-800 text-lg">Panel principal</h1>
+      <p id="page-subtitle" class="text-sm text-slate-500">Jueves 28 de mayo, 2026</p>
+    </div>
+    <div id="page-actions"></div>
+  </header>
+  <main id="content" class="flex-1 overflow-y-auto p-6"></main>
+</div>
+
+</div>
+
+<!-- MODAL NUEVO PACIENTE -->
+<div id="modal-patient" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+      <h3 class="font-bold text-slate-800" id="modal-patient-title">Nuevo paciente</h3>
+      <button onclick="closeModal('modal-patient')" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+    </div>
+    <form class="px-6 py-5 space-y-4" onsubmit="savePatient(event)">
+      <input type="hidden" id="patient-edit-id" value=""/>
+      <div><label class="form-label">Nombre completo *</label><input type="text" id="patient-name" required class="form-input" placeholder="Ej: Juan Pérez"/></div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="form-label">Teléfono</label><input type="text" id="patient-phone" class="form-input" placeholder="+54 11 1234-5678"/></div>
+        <div><label class="form-label">Email</label><input type="email" id="patient-email" class="form-input" placeholder="correo@gmail.com"/></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="form-label">DNI</label><input type="text" id="patient-dni" class="form-input" placeholder="12.345.678"/></div>
+        <div><label class="form-label">Fecha de nacimiento</label><input type="date" id="patient-birth" class="form-input"/></div>
+      </div>
+      <div><label class="form-label">Obra social / Seguro</label><input type="text" id="patient-insurance" class="form-input" placeholder="Ej: OSDE 310, PAMI, particular..."/></div>
+      <div><label class="form-label">Notas clínicas</label><textarea id="patient-notes" rows="2" class="form-input" placeholder="Alergias, antecedentes, diagnóstico..."></textarea></div>
+      <div class="flex gap-3 pt-1">
+        <button type="submit" class="btn-primary flex-1">Guardar paciente</button>
+        <button type="button" onclick="closeModal('modal-patient')" class="btn-outline">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL NUEVO TURNO -->
+<div id="modal-appt" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+      <h3 class="font-bold text-slate-800">Nuevo turno</h3>
+      <button onclick="closeModal('modal-appt')" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+    </div>
+    <form class="px-6 py-5 space-y-4" onsubmit="saveAppt(event)">
+      <div>
+        <label class="form-label">Paciente *</label>
+        <select id="appt-patient" required class="form-input"><option value="">Seleccionar paciente...</option></select>
+      </div>
+      <div>
+        <label class="form-label">Profesional *</label>
+        <select id="appt-professional" required class="form-input"><option value="">Seleccionar profesional...</option></select>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="form-label">Fecha *</label><input type="date" id="appt-date" required class="form-input" value="2026-05-28"/></div>
+        <div><label class="form-label">Hora *</label><input type="time" id="appt-time" required class="form-input" value="09:00"/></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="form-label">Duración (min)</label><select id="appt-duration" class="form-input"><option value="30">30 min</option><option value="45" selected>45 min</option><option value="60">60 min</option></select></div>
+        <div><label class="form-label">Estado</label><select id="appt-status" class="form-input"><option value="pending">Pendiente</option><option value="confirmed">Confirmado</option></select></div>
+      </div>
+      <div><label class="form-label">Motivo</label><input type="text" id="appt-reason" class="form-input" placeholder="Ej: Consulta cardiología"/></div>
+      <div class="flex gap-3 pt-1">
+        <button type="submit" class="btn-primary flex-1">Guardar turno</button>
+        <button type="button" onclick="closeModal('modal-appt')" class="btn-outline">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="fixed bottom-6 right-6 bg-slate-800 text-white text-sm px-5 py-3 rounded-xl shadow-2xl transition-all duration-300 opacity-0 pointer-events-none z-50">✅ Guardado</div>
+
+<script>
+const TODAY = '2026-05-28';
+const TOMORROW = '2026-05-29';
+
+const SPEC_COLORS = {
+  'Kinesiología':  {bg:'bg-blue-100',   text:'text-blue-700',   dot:'bg-blue-500'},
+  'Odontología':   {bg:'bg-yellow-100',  text:'text-yellow-700', dot:'bg-yellow-500'},
+  'Cardiología':   {bg:'bg-red-100',     text:'text-red-700',    dot:'bg-red-500'},
+  'Pediatría':     {bg:'bg-green-100',   text:'text-green-700',  dot:'bg-green-500'},
+};
+
+const professionals = [
+  { id:1, name:"Dr. Lucía Morales",  specialty:"Cardiología",  color:"#ef4444", active:true },
+  { id:2, name:"Dra. Ana Méndez",    specialty:"Odontología",  color:"#f59e0b", active:true },
+  { id:3, name:"Lic. Pablo Vega",    specialty:"Kinesiología", color:"#3b82f6", active:true },
+  { id:4, name:"Dr. Carlos Rojas",   specialty:"Pediatría",    color:"#22c55e", active:true },
+  { id:5, name:"Dra. Elena Torres",  specialty:"Odontología",  color:"#a78bfa", active:true },
+  { id:6, name:"Lic. Marta Suárez",  specialty:"Kinesiología", color:"#06b6d4", active:true },
+];
+
+let patients = [
+  { id:1,  name:"Sofía Díaz",       phone:"+54 11 4523-8891", email:"sofia.diaz@gmail.com",    dni:"28.451.123", birth:"1985-03-12", insurance:"OSDE 410",   notes:"Hipertensión leve. Controlada con medicación.", createdAt:"2026-01-10" },
+  { id:2,  name:"Martín García",    phone:"+54 11 5678-2341", email:"mgarcia@yahoo.com",        dni:"32.891.456", birth:"1978-07-22", insurance:"PAMI",        notes:"", createdAt:"2026-01-18" },
+  { id:3,  name:"Camila Torres",    phone:"+54 9 351 456-7890",email:"",                        dni:"38.562.234", birth:"2001-11-05", insurance:"Particular",  notes:"Ortodoncia fase 2.", createdAt:"2026-01-25" },
+  { id:4,  name:"Roberto Álvarez",  phone:"+54 11 6789-0123", email:"ralvarez@gmail.com",       dni:"25.123.789", birth:"1972-06-18", insurance:"Swiss Medical",notes:"Arritmia leve. ECG trimestral.", createdAt:"2026-02-01" },
+  { id:5,  name:"Valentina López",  phone:"+54 11 7890-1234", email:"vlopez@hotmail.com",       dni:"40.123.567", birth:"2001-09-08", insurance:"Galeno",      notes:"Escoliosis. Control mensual.", createdAt:"2026-02-10" },
+  { id:6,  name:"Diego Herrera",    phone:"+54 9 11 9012-3456",email:"diego.h@gmail.com",       dni:"35.789.012", birth:"1993-04-25", insurance:"IOMA",        notes:"", createdAt:"2026-02-15" },
+  { id:7,  name:"Ana Pérez",        phone:"+54 11 8901-2345", email:"ana.perez@gmail.com",      dni:"42.345.678", birth:"2018-03-10", insurance:"OSDE 210",    notes:"Paciente pediátrica. Alergias: penicilina.", createdAt:"2026-02-20" },
+  { id:8,  name:"Lucas Fernández",  phone:"+54 11 0123-4567", email:"lfernandez@gmail.com",     dni:"30.456.789", birth:"1988-12-14", insurance:"Sancor",      notes:"Tendinitis hombro derecho.", createdAt:"2026-03-01" },
+  { id:9,  name:"Marta Sosa",       phone:"+54 11 3456-7890", email:"msosa@gmail.com",          dni:"22.789.012", birth:"1968-08-30", insurance:"PAMI",        notes:"HTA + diabetes tipo 2. Monitoreo mensual.", createdAt:"2026-03-05" },
+  { id:10, name:"Pablo Ruiz",       phone:"+54 11 4567-8901", email:"pablo.ruiz@outlook.com",   dni:"36.123.456", birth:"1995-01-15", insurance:"Particular",  notes:"Caries múltiples en tratamiento.", createdAt:"2026-03-10" },
+  { id:11, name:"Florencia Medina", phone:"+54 9 11 5678-9012",email:"flor.medina@gmail.com",   dni:"41.234.567", birth:"2015-06-22", insurance:"OSDE 310",    notes:"Controles pediátricos de rutina.", createdAt:"2026-03-15" },
+  { id:12, name:"Sergio Castillo",  phone:"+54 11 6789-0123", email:"scastillo@gmail.com",      dni:"29.345.678", birth:"1982-09-03", insurance:"Swiss Medical",notes:"Rehabilitación post-operatoria rodilla.", createdAt:"2026-03-20" },
+];
+
+let appointments = [
+  // Sofía Díaz - Cardiología (Dr. Morales)
+  { id:1,  patientId:1, profId:1, date:"2026-04-10", time:"09:00", duration:30, reason:"Control cardiológico",        status:"completed", diagnostico:"HTA estadio 1 controlada. PA 135/85 mmHg.", observaciones:"Paciente refiere buena tolerancia al Enalapril. Se ajusta dosis. Se solicita ECG de control.", receta:"Enalapril 10mg 1 comp/día. Aspirina 100mg 1 comp/día. Control en 6 semanas." },
+  { id:2,  patientId:1, profId:1, date:"2026-05-28", time:"09:00", duration:30, reason:"Seguimiento HTA",             status:"confirmed",  diagnostico:"", observaciones:"", receta:"" },
+  { id:3,  patientId:1, profId:1, date:"2026-06-25", time:"09:00", duration:30, reason:"Control trimestral",          status:"pending",    diagnostico:"", observaciones:"", receta:"" },
+  // Martín García - Odontología (Dra. Méndez)
+  { id:4,  patientId:2, profId:2, date:"2026-04-15", time:"10:00", duration:45, reason:"Limpieza dental",             status:"completed",  diagnostico:"Cálculo supragingival generalizado. Gingivitis leve.", observaciones:"Detartraje ultrasónico y pulido coronal. Instrucción de higiene oral.", receta:"Enjuague con clorhexidina 0.12% por 10 días." },
+  { id:5,  patientId:2, profId:2, date:"2026-05-28", time:"10:00", duration:45, reason:"Tratamiento de conducto",     status:"pending",    diagnostico:"", observaciones:"", receta:"" },
+  // Camila Torres - Odontología (Dra. Torres)
+  { id:6,  patientId:3, profId:5, date:"2026-03-20", time:"11:00", duration:60, reason:"Ortodoncia - ajuste 1",       status:"completed",  diagnostico:"Maloclusión clase II. Ortodoncia fija en curso.", observaciones:"Activación arco .016 NiTi. Buena higiene. Sin dolor referido.", receta:"Ibuprofeno 400mg si dolor post-ajuste. Cepillo interdental ortho." },
+  { id:7,  patientId:3, profId:5, date:"2026-04-20", time:"11:00", duration:60, reason:"Ortodoncia - ajuste 2",       status:"completed",  diagnostico:"Evolución favorable. Cierre de espacios progresando.", observaciones:"Cambio a arco .018 SS. Alineación anterior mejorada significativamente.", receta:"" },
+  { id:8,  patientId:3, profId:5, date:"2026-05-28", time:"11:00", duration:60, reason:"Ortodoncia - ajuste 3",       status:"confirmed",  diagnostico:"", observaciones:"", receta:"" },
+  { id:9,  patientId:3, profId:5, date:"2026-06-20", time:"11:00", duration:60, reason:"Ortodoncia - ajuste 4",       status:"pending",    diagnostico:"", observaciones:"", receta:"" },
+  // Roberto Álvarez - Cardiología
+  { id:10, patientId:4, profId:1, date:"2026-03-05", time:"09:30", duration:45, reason:"ECG + evaluación",            status:"completed",  diagnostico:"Arritmia sinusal leve. Sin hallazgos de patología estructural.", observaciones:"ECG: ritmo sinusal, FC 72 lpm, sin alteraciones del ST. Se solicita Holter 24hs.", receta:"Continuar Bisoprolol 2.5mg/día. Control con Holter en 8 semanas." },
+  { id:11, patientId:4, profId:1, date:"2026-05-29", time:"09:30", duration:45, reason:"Holter 24hs - resultado",     status:"pending",    diagnostico:"", observaciones:"", receta:"" },
+  // Valentina López - Kinesiología (Lic. Vega)
+  { id:12, patientId:5, profId:3, date:"2026-03-10", time:"16:00", duration:30, reason:"Evaluación escoliosis",       status:"completed",  diagnostico:"Escoliosis idiopática leve (Cobb 16°). No requiere corsé.", observaciones:"Evaluación postural completa. Se diseña programa de core y Pilates terapéutico.", receta:"" },
+  { id:13, patientId:5, profId:3, date:"2026-04-10", time:"16:00", duration:30, reason:"Ejercicios mes 2",            status:"completed",  diagnostico:"Evolución positiva. Postura de pie mejorada.", observaciones:"Fuerza de core aumentada. Cumple ejercicios en domicilio. Se agregan ejercicios en espejo.", receta:"" },
+  { id:14, patientId:5, profId:3, date:"2026-05-28", time:"16:00", duration:30, reason:"Control mensual escoliosis",  status:"pending",    diagnostico:"", observaciones:"", receta:"" },
+  // Diego Herrera - Kinesiología (Lic. Suárez)
+  { id:15, patientId:6, profId:6, date:"2026-05-20", time:"14:00", duration:45, reason:"Lumbalgia crónica",           status:"completed",  diagnostico:"Lumbalgia mecánica crónica. Contractura paravertebral L4-L5.", observaciones:"Calor húmedo, TENS y masoterapia. Se inicia reeducación postural.", receta:"Diclofenac 50mg c/8hs por 5 días. Ciclobenzaprina 5mg por las noches." },
+  { id:16, patientId:6, profId:6, date:"2026-05-29", time:"14:00", duration:45, reason:"Sesión terapéutica 2",        status:"pending",    diagnostico:"", observaciones:"", receta:"" },
+  // Ana Pérez - Pediatría (Dr. Rojas)
+  { id:17, patientId:7, profId:4, date:"2026-02-15", time:"15:30", duration:30, reason:"Control 8 años",              status:"completed",  diagnostico:"Desarrollo psicomotor normal. Sin patología activa.", observaciones:"Peso 25kg (P50), Talla 128cm (P50). Alergia a penicilina en historia.", receta:"Vacuna doble viral (recordatorio). Vitamina D 800 UI/día." },
+  { id:18, patientId:7, profId:4, date:"2026-05-28", time:"15:30", duration:30, reason:"Control 8 años - vacunas",    status:"pending",    diagnostico:"", observaciones:"", receta:"" },
+  // Lucas Fernández - Kinesiología (Lic. Vega)
+  { id:19, patientId:8, profId:3, date:"2026-05-05", time:"10:00", duration:45, reason:"Evaluación tendinitis",       status:"completed",  diagnostico:"Tendinitis del supraespinoso hombro derecho grado II.", observaciones:"Dolor a la palpación y abducción >90°. Ultrasonido terapéutico y crioterapia.", receta:"Ibuprofeno 400mg c/8hs por 5 días. Crema antiinflamatoria. Evitar cargas >3kg." },
+  { id:20, patientId:8, profId:3, date:"2026-05-12", time:"10:00", duration:45, reason:"Sesión terapéutica 1",        status:"completed",  diagnostico:"Tendinitis en evolución favorable.", observaciones:"Leve mejoría del rango articular. Se incorpora fortalecimiento con banda elástica liviana.", receta:"" },
+  { id:21, patientId:8, profId:3, date:"2026-05-29", time:"10:00", duration:45, reason:"Sesión terapéutica 3",        status:"pending",    diagnostico:"", observaciones:"", receta:"" },
+  // Marta Sosa - Cardiología + seguimiento
+  { id:22, patientId:9, profId:1, date:"2026-04-01", time:"08:30", duration:45, reason:"Control HTA + diabetes",      status:"completed",  diagnostico:"HTA + DBT tipo 2 controladas. HbA1c 7.1%. PA 130/80 mmHg.", observaciones:"Glucemia ayunas 118 mg/dl. Se ajusta Metformina. ECG normal. Sin retinopatía.", receta:"Metformina 1000mg c/12hs. Enalapril 5mg/día. AAS 100mg/día. Control mensual." },
+  { id:23, patientId:9, profId:1, date:"2026-05-29", time:"08:30", duration:45, reason:"Control mensual",             status:"pending",    diagnostico:"", observaciones:"", receta:"" },
+  // Pablo Ruiz - Odontología (Dra. Méndez)
+  { id:24, patientId:10,profId:2, date:"2026-04-08", time:"11:30", duration:60, reason:"Extracción molar",            status:"completed",  diagnostico:"Caries profunda molar 3.6 con compromiso pulpar. Indicación de extracción.", observaciones:"Extracción bajo anestesia local. Sin complicaciones. Sutura 3-0 reabsorbible.", receta:"Amoxicilina 500mg c/8hs 7 días. Ibuprofeno 400mg c/8hs 3 días. Dieta blanda 48hs." },
+  { id:25, patientId:10,profId:2, date:"2026-05-28", time:"17:00", duration:60, reason:"Implante molar",              status:"confirmed",  diagnostico:"", observaciones:"", receta:"" },
+  // Florencia Medina - Pediatría
+  { id:26, patientId:11,profId:4, date:"2026-04-22", time:"16:00", duration:30, reason:"Control 11 años",             status:"completed",  diagnostico:"Desarrollo normal para la edad. Sin patología activa.", observaciones:"Peso 38kg (P50), Talla 145cm (P60). Esquema de vacunación completo.", receta:"Vitamina D 1000 UI/día. Fluor 0.5mg/día (preventivo dental)." },
+  { id:27, patientId:11,profId:4, date:"2026-05-29", time:"16:00", duration:30, reason:"Vacunas esquema completo",    status:"pending",    diagnostico:"", observaciones:"", receta:"" },
+  // Sergio Castillo - Kinesiología (Lic. Suárez)
+  { id:28, patientId:12,profId:6, date:"2026-03-15", time:"13:00", duration:60, reason:"Evaluación post-op",          status:"completed",  diagnostico:"Post-artroscopia rodilla derecha (4 semanas). Edema residual leve.", observaciones:"Inicio protocolo fase 1: movilización 0-90°, isométricos de cuádriceps. Marcha con muletas.", receta:"Diclofenac gel local. Crioterapia 15min c/4hs.", imagenes:[{nombre:"RX Rodilla AP", url:"https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Knee_X-ray_by_CMC.jpg/220px-Knee_X-ray_by_CMC.jpg"},{nombre:"RX Rodilla Lateral", url:"https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Lateral_knee.jpg/220px-Lateral_knee.jpg"}] },
+  { id:29, patientId:12,profId:6, date:"2026-04-01", time:"13:00", duration:60, reason:"Rehabilitación semana 3",     status:"completed",  diagnostico:"Fase 2 rehabilitación rodilla. Flexión 110°.", observaciones:"Se retira una muleta. Inicio bicicleta fija sin resistencia. Trabajo propioceptivo básico.", receta:"" },
+  { id:30, patientId:12,profId:6, date:"2026-05-28", time:"13:00", duration:60, reason:"Rehabilitación semana 11",    status:"confirmed",  diagnostico:"", observaciones:"", receta:"" },
+  { id:31, patientId:12,profId:6, date:"2026-06-04", time:"13:00", duration:60, reason:"Rehabilitación semana 12",    status:"pending",    diagnostico:"", observaciones:"", receta:"" },
+];
+
+let nextPatientId = 13;
+let nextApptId = 32;
+
+// STATE
+let state = {
+  view: 'dashboard',
+  patientId: null,
+  agendaView: 'day',
+  agendaDate: TODAY,
+  agendaStatus: '',
+  agendaProf: '',
+  agendaSpec: '',
+  patientSearch: '',
+};
+
+// HELPERS
+function getPatient(id) { return patients.find(p=>p.id===id); }
+function getProf(id) { return professionals.find(p=>p.id===id); }
+function getPatientAppts(id) { return appointments.filter(a=>a.patientId===id).sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time)); }
+function getTodayAppts() { return appointments.filter(a=>a.date===TODAY).sort((a,b)=>a.time.localeCompare(b.time)); }
+function getTomorrowAppts() { return appointments.filter(a=>a.date===TOMORROW); }
+function getApptCount(id) { return appointments.filter(a=>a.patientId===id).length; }
+
+function specBadge(spec) {
+  const c = SPEC_COLORS[spec]||{bg:'bg-slate-100',text:'text-slate-600'};
+  return `<span class="${c.bg} ${c.text} text-xs font-semibold px-2 py-0.5 rounded-full">${spec}</span>`;
+}
+function badgeHtml(status) {
+  const labels={pending:'Pendiente',confirmed:'Confirmado',cancelled:'Cancelado',completed:'Completado'};
+  return `<span class="badge-${status}">${labels[status]||status}</span>`;
+}
+function avatarHtml(name,size='9',bg='bg-blue-100',txt='text-blue-600') {
+  return `<div class="w-${size} h-${size} ${bg} rounded-full flex items-center justify-center flex-shrink-0"><span class="${txt} font-bold text-sm">${name[0].toUpperCase()}</span></div>`;
+}
+function fmtDate(d) { if(!d)return'—'; const[y,m,day]=d.split('-'); return `${day}/${m}/${y}`; }
+function fmtDateLong(d) {
+  const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const[y,m,day]=d.split('-'); return `${parseInt(day)} de ${months[parseInt(m)-1]}`;
+}
+function addDays(dateStr,n) { const d=new Date(dateStr+'T12:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
+function dayName(dateStr) { return['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'][new Date(dateStr+'T12:00:00').getDay()]; }
+function toast(msg) {
+  const t=document.getElementById('toast');
+  t.textContent='✅ '+msg; t.classList.remove('opacity-0'); t.classList.add('opacity-100');
+  setTimeout(()=>{t.classList.remove('opacity-100');t.classList.add('opacity-0');},2500);
+}
+
+// NAVIGATION
+function navigate(view, param) {
+  state.view=view;
+  if(param!==undefined) state.patientId=param;
+  updateSidebar(); render();
+}
+function updateSidebar() {
+  ['dashboard','agenda','patients','professionals','stats','reminders','bot','settings'].forEach(v=>{
+    const el=document.getElementById('nav-'+v); if(el) el.classList.remove('active');
+  });
+  const active=state.view==='patient-detail'?'patients':state.view;
+  const el=document.getElementById('nav-'+active); if(el) el.classList.add('active');
+}
+
+function render() {
+  switch(state.view) {
+    case 'dashboard':      renderDashboard(); break;
+    case 'agenda':         renderAgenda(); break;
+    case 'patients':       renderPatients(); break;
+    case 'patient-detail': renderPatientDetail(); break;
+    case 'professionals':  renderProfessionals(); break;
+    case 'stats':          renderStats(); break;
+    case 'reminders':      renderReminders(); break;
+    case 'bot':            renderBot(); break;
+    case 'settings':       renderSettings(); break;
+  }
+}
+
+// ═══ DASHBOARD ═══
+function renderDashboard() {
+  document.getElementById('page-title').textContent='Panel principal';
+  document.getElementById('page-subtitle').textContent='Jueves 28 de mayo, 2026 — Centro Médico Integral';
+  document.getElementById('page-actions').innerHTML=`<button onclick="openNewAppt()" class="btn-primary">+ Nuevo turno</button>`;
+
+  const todayAppts=getTodayAppts();
+  const tomorrowCount=getTomorrowAppts().length;
+  const confirmedToday=todayAppts.filter(a=>a.status==='confirmed').length;
+  const pendingToday=todayAppts.filter(a=>a.status==='pending').length;
+
+  let weekHtml='';
+  for(let i=0;i<7;i++){
+    const d=addDays(TODAY,i);
+    const cnt=appointments.filter(a=>a.date===d).length;
+    const label=i===0?'Hoy':i===1?'Mañana':dayName(d)+' '+fmtDate(d).slice(0,5);
+    weekHtml+=`<div class="flex items-center gap-2"><span class="text-xs text-slate-500 w-28 flex-shrink-0">${label}</span><div class="flex-1 bg-slate-100 rounded-full h-2"><div class="bg-blue-500 h-2 rounded-full" style="width:${Math.min(cnt*9,100)}%"></div></div><span class="text-xs font-semibold text-slate-700 w-4 text-right">${cnt}</span></div>`;
+  }
+
+  const recentPats=[...patients].slice(-5).reverse();
+  const recentHtml=recentPats.map(p=>`
+    <div onclick="navigate('patient-detail',${p.id})" class="flex items-center gap-3 hover:bg-slate-50 rounded-lg p-2 -mx-2 cursor-pointer transition-colors">
+      ${avatarHtml(p.name,'8')}
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-medium text-slate-800 truncate">${p.name}</p>
+        <p class="text-xs text-slate-400 truncate">${p.phone||p.email||'Sin contacto'}</p>
+      </div>
+    </div>`).join('');
+
+  const todayHtml=todayAppts.length?todayAppts.map(a=>{
+    const p=getPatient(a.patientId); const prof=getProf(a.profId);
+    return `<div class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 hover:bg-slate-50 transition-colors">
+      <div class="text-center min-w-[52px]"><p class="font-bold text-slate-800 text-sm">${a.time}</p><p class="text-xs text-slate-400">${a.duration}min</p></div>
+      <div class="w-px h-8 bg-slate-200"></div>
+      <div class="flex-1 min-w-0 cursor-pointer" onclick="navigate('patient-detail',${a.patientId})">
+        <p class="font-semibold text-slate-800 text-sm hover:text-blue-600">${p?p.name:'—'}</p>
+        <p class="text-xs text-slate-400 truncate">${a.reason||'Sin motivo'}</p>
+      </div>
+      ${prof?specBadge(prof.specialty):''}
+      ${badgeHtml(a.status)}
+      <div class="flex gap-1">
+        ${a.status==='pending'?`<button onclick="updateApptStatus(${a.id},'confirmed')" class="btn-success">✓</button>`:''}
+        ${a.status!=='cancelled'&&a.status!=='completed'?`<button onclick="updateApptStatus(${a.id},'cancelled')" class="btn-danger">✗</button>`:''}
+      </div>
+    </div>`;
+  }).join('') : `<div class="text-center py-10 text-slate-400"><p class="text-3xl mb-2">📅</p><p class="text-sm">No hay turnos para hoy</p></div>`;
+
+  document.getElementById('content').innerHTML=`
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="stat-card">
+      <div class="flex items-center justify-between mb-2"><p class="text-sm text-slate-500 font-medium">Turnos hoy</p><div class="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center"><svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg></div></div>
+      <p class="text-3xl font-extrabold text-slate-800">${todayAppts.length}</p>
+      <p class="text-xs text-slate-400 mt-1">${confirmedToday} confirmados · ${pendingToday} pendientes</p>
+    </div>
+    <div class="stat-card">
+      <div class="flex items-center justify-between mb-2"><p class="text-sm text-slate-500 font-medium">Pacientes</p><div class="w-9 h-9 bg-purple-100 rounded-lg flex items-center justify-center"><svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg></div></div>
+      <p class="text-3xl font-extrabold text-slate-800">${patients.length}</p>
+      <p class="text-xs text-slate-400 mt-1">${professionals.length} profesionales activos</p>
+    </div>
+    <div class="stat-card">
+      <div class="flex items-center justify-between mb-2"><p class="text-sm text-slate-500 font-medium">Mañana</p><div class="w-9 h-9 bg-orange-100 rounded-lg flex items-center justify-center"><svg class="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg></div></div>
+      <p class="text-3xl font-extrabold text-slate-800">${tomorrowCount}</p>
+      <p class="text-xs text-slate-400 mt-1">turnos programados</p>
+    </div>
+    <div class="stat-card">
+      <div class="flex items-center justify-between mb-2"><p class="text-sm text-slate-500 font-medium">WhatsApp bot</p><div class="w-9 h-9 bg-green-100 rounded-lg flex items-center justify-center"><svg class="w-5 h-5 text-green-600" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg></div></div>
+      <p class="text-3xl font-extrabold text-slate-800">Activo</p>
+      <p class="text-xs text-green-600 mt-1 font-medium cursor-pointer hover:underline" onclick="navigate('reminders')">→ Enviar recordatorios</p>
+    </div>
+  </div>
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2 card">
+      <div class="flex items-center justify-between mb-4"><h2 class="font-bold text-slate-800">Agenda de hoy</h2><span onclick="navigate('agenda')" class="text-sm text-blue-600 hover:underline cursor-pointer">Ver todos →</span></div>
+      <div class="space-y-2">${todayHtml}</div>
+    </div>
+    <div class="space-y-5">
+      <div class="card"><h3 class="font-bold text-slate-800 mb-3">Próximos 7 días</h3><div class="space-y-2">${weekHtml}</div></div>
+      <div class="card">
+        <div class="flex items-center justify-between mb-3"><h3 class="font-bold text-slate-800">Últimos pacientes</h3><span onclick="navigate('patients')" class="text-xs text-blue-600 hover:underline cursor-pointer">Ver todos</span></div>
+        <div class="space-y-1">${recentHtml}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══ AGENDA ═══
+function renderAgenda() {
+  document.getElementById('page-title').textContent='Agenda';
+  document.getElementById('page-subtitle').textContent='Gestión de turnos';
+  document.getElementById('page-actions').innerHTML=`<button onclick="openNewAppt()" class="btn-primary">+ Nuevo turno</button>`;
+
+  let appts=appointments
+    .filter(a=>!state.agendaDate||a.date===state.agendaDate)
+    .filter(a=>!state.agendaStatus||a.status===state.agendaStatus)
+    .filter(a=>!state.agendaProf||a.profId===parseInt(state.agendaProf))
+    .sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+
+  if(state.agendaSpec) {
+    const profIds=professionals.filter(p=>p.specialty===state.agendaSpec).map(p=>p.id);
+    appts=appts.filter(a=>profIds.includes(a.profId));
+  }
+
+  const dayRows=appts.length?appts.map(a=>{
+    const p=getPatient(a.patientId); const prof=getProf(a.profId);
+    return `<tr class="hover:bg-slate-50 transition-colors">
+      <td class="px-4 py-3 font-bold text-slate-800 whitespace-nowrap">${a.time}</td>
+      <td class="px-4 py-3"><span onclick="navigate('patient-detail',${a.patientId})" class="font-semibold text-slate-800 hover:text-blue-600 cursor-pointer text-sm">${p?p.name:'—'}</span></td>
+      <td class="px-4 py-3 text-xs">${prof?specBadge(prof.specialty):''}</td>
+      <td class="px-4 py-3 text-xs text-slate-500">${prof?prof.name:'—'}</td>
+      <td class="px-4 py-3 text-slate-500 text-sm">${a.reason||'—'}</td>
+      <td class="px-4 py-3 text-center">${badgeHtml(a.status)}</td>
+      <td class="px-4 py-3"><div class="flex gap-1 justify-center">
+        ${a.status==='pending'?`<button onclick="updateApptStatus(${a.id},'confirmed')" class="btn-success">✓</button>`:''}
+        ${a.status!=='cancelled'&&a.status!=='completed'?`<button onclick="updateApptStatus(${a.id},'cancelled')" class="btn-danger">✗</button>`:''}
+        ${a.status==='confirmed'?`<button onclick="updateApptStatus(${a.id},'completed')" style="background:#f1f5f9;color:#64748b;font-size:.75rem;font-weight:600;padding:.3rem .6rem;border-radius:.4rem;cursor:pointer;border:none;">✔</button>`:''}
+      </div></td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="7" class="px-5 py-12 text-center text-slate-400">No hay turnos para los filtros seleccionados.</td></tr>`;
+
+  // Week view — respeta filtros activos
+  let weekDayHtml='';
+  for(let i=0;i<7;i++){
+    const d=addDays(TODAY,i-1);
+    let dayAppts=appointments.filter(a=>a.date===d);
+    if(state.agendaStatus) dayAppts=dayAppts.filter(a=>a.status===state.agendaStatus);
+    if(state.agendaProf)   dayAppts=dayAppts.filter(a=>a.profId===parseInt(state.agendaProf));
+    if(state.agendaSpec){const ids=professionals.filter(p=>p.specialty===state.agendaSpec).map(p=>p.id);dayAppts=dayAppts.filter(a=>ids.includes(a.profId));}
+    dayAppts=dayAppts.sort((a,b)=>a.time.localeCompare(b.time));
+    const isToday=d===TODAY;
+    weekDayHtml+=`<div class="flex-1 min-w-0">
+      <div class="text-center text-xs font-bold mb-2 ${isToday?'text-blue-600':'text-slate-500'}">${dayName(d)}<br/><span class="text-sm font-extrabold ${isToday?'text-blue-600':''}">${d.slice(8)}</span></div>
+      <div class="space-y-1 min-h-[80px]">
+        ${dayAppts.map(a=>{
+          const p=getPatient(a.patientId); const prof=getProf(a.profId);
+          const spec=prof?prof.specialty:''; const c=SPEC_COLORS[spec]||{bg:'bg-blue-100',text:'text-blue-800'};
+          return `<div onclick="navigate('patient-detail',${a.patientId})" class="${c.bg} ${c.text} text-xs rounded px-1.5 py-1 cursor-pointer hover:opacity-80">
+            <p class="font-semibold truncate">${p?p.name.split(' ')[0]:'—'}</p>
+            <p class="opacity-70">${a.time} ${spec}</p>
+          </div>`;
+        }).join('')}
+        ${dayAppts.length===0?'<div class="text-xs text-slate-300 text-center pt-4">—</div>':''}
+      </div>
+    </div>`;
+  }
+
+  // Month view — respeta filtros activos
+  const year=2026,month=4;
+  const firstDay=new Date(year,month,1).getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  let calCells='';
+  for(let i=0;i<firstDay;i++) calCells+=`<div class="border border-slate-100 bg-slate-50 min-h-[70px] rounded-lg"></div>`;
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=`2026-05-${String(d).padStart(2,'0')}`;
+    let dayAppts=appointments.filter(a=>a.date===ds);
+    if(state.agendaStatus) dayAppts=dayAppts.filter(a=>a.status===state.agendaStatus);
+    if(state.agendaProf)   dayAppts=dayAppts.filter(a=>a.profId===parseInt(state.agendaProf));
+    if(state.agendaSpec){const ids=professionals.filter(p=>p.specialty===state.agendaSpec).map(p=>p.id);dayAppts=dayAppts.filter(a=>ids.includes(a.profId));}
+    const isToday=ds===TODAY;
+    const specCounts={};
+    dayAppts.forEach(a=>{const prof=getProf(a.profId);if(prof){specCounts[prof.specialty]=(specCounts[prof.specialty]||0)+1;}});
+    const dots=Object.entries(specCounts).slice(0,4).map(([s])=>{const c=SPEC_COLORS[s]||{dot:'bg-slate-400'};return`<span class="w-2 h-2 rounded-full ${c.dot} inline-block"></span>`;}).join('');
+    calCells+=`<div onclick="state.agendaDate='${ds}';state.agendaView='day';renderAgenda();" class="border ${isToday?'border-blue-400 bg-blue-50':'border-slate-100'} min-h-[70px] rounded-lg p-2 cursor-pointer hover:border-blue-300 transition-colors">
+      <p class="text-xs font-bold ${isToday?'text-blue-600':'text-slate-600'}">${d}</p>
+      ${dayAppts.length>0?`<div class="mt-1"><p class="text-xs font-bold text-slate-700">${dayAppts.length} turno${dayAppts.length>1?'s':''}</p><div class="flex gap-0.5 mt-0.5">${dots}</div></div>`:''}
+    </div>`;
+  }
+
+  const specOptions=Object.keys(SPEC_COLORS).map(s=>`<option value="${s}" ${state.agendaSpec===s?'selected':''}>${s}</option>`).join('');
+  const profOptions=professionals.map(p=>`<option value="${p.id}" ${state.agendaProf==p.id?'selected':''}>${p.name}</option>`).join('');
+
+  document.getElementById('content').innerHTML=`
+  <div class="card mb-5 flex flex-wrap items-center gap-3">
+    <div class="flex items-center gap-2">
+      <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Fecha:</span>
+      <input type="date" value="${state.agendaDate}" onchange="state.agendaDate=this.value;renderAgenda()" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      <button onclick="state.agendaDate='';renderAgenda()" class="text-xs text-slate-400 hover:text-slate-600">✕</button>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Especialidad:</span>
+      <select onchange="state.agendaSpec=this.value;state.agendaProf='';state.agendaDate='';renderAgenda()" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="" ${!state.agendaSpec?'selected':''}>Todas</option>${specOptions}
+      </select>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Profesional:</span>
+      <select onchange="state.agendaProf=this.value;state.agendaSpec='';state.agendaDate='';renderAgenda()" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="" ${!state.agendaProf?'selected':''}>Todos</option>${profOptions}
+      </select>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Estado:</span>
+      <select onchange="state.agendaStatus=this.value;renderAgenda()" class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <option value="" ${!state.agendaStatus?'selected':''}>Todos</option>
+        <option value="pending" ${state.agendaStatus==='pending'?'selected':''}>Pendiente</option>
+        <option value="confirmed" ${state.agendaStatus==='confirmed'?'selected':''}>Confirmado</option>
+        <option value="completed" ${state.agendaStatus==='completed'?'selected':''}>Completado</option>
+        <option value="cancelled" ${state.agendaStatus==='cancelled'?'selected':''}>Cancelado</option>
+      </select>
+    </div>
+    <div class="ml-auto flex gap-1 bg-slate-100 rounded-xl p-1">
+      <button onclick="state.agendaView='day';renderAgenda()" class="px-4 py-1.5 text-sm font-semibold rounded-lg transition-all ${state.agendaView==='day'?'bg-blue-600 text-white':'text-slate-500 hover:text-slate-700'}">📋 Día</button>
+      <button onclick="state.agendaView='week';renderAgenda()" class="px-4 py-1.5 text-sm font-semibold rounded-lg transition-all ${state.agendaView==='week'?'bg-blue-600 text-white':'text-slate-500 hover:text-slate-700'}">📅 Semana</button>
+      <button onclick="state.agendaView='month';renderAgenda()" class="px-4 py-1.5 text-sm font-semibold rounded-lg transition-all ${state.agendaView==='month'?'bg-blue-600 text-white':'text-slate-500 hover:text-slate-700'}">🗓 Mes</button>
+    </div>
+  </div>
+
+  <div class="${state.agendaView!=='day'?'hidden':''}">
+    <div class="card p-0 overflow-hidden">
+      <div class="px-5 py-3 border-b border-slate-100 bg-slate-50"><p class="text-sm font-semibold text-slate-700">${state.agendaDate?fmtDateLong(state.agendaDate)+', 2026 — '+appts.length+' turno(s)':'Todos los turnos — '+appts.length+' en total'}</p></div>
+      <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead><tr class="border-b border-slate-100">
+          <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Hora</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Paciente</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Especialidad</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Profesional</th>
+          <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Motivo</th>
+          <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Estado</th>
+          <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Acciones</th>
+        </tr></thead>
+        <tbody class="divide-y divide-slate-50">${dayRows}</tbody>
+      </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="${state.agendaView!=='week'?'hidden':''}">
+    <div class="card overflow-x-auto">
+      <h3 class="font-bold text-slate-800 mb-4 text-sm">Semana del ${fmtDate(addDays(TODAY,-1))} al ${fmtDate(addDays(TODAY,5))}</h3>
+      <div class="flex gap-2 min-w-[700px]">${weekDayHtml}</div>
+    </div>
+  </div>
+
+  <div class="${state.agendaView!=='month'?'hidden':''}">
+    <div class="card">
+      <h3 class="font-bold text-slate-800 mb-4 text-sm">Mayo 2026 — hacé click en un día para ver los turnos</h3>
+      <div class="grid grid-cols-7 gap-1 mb-1">${['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'].map(d=>`<div class="text-center text-xs font-semibold text-slate-500 py-1">${d}</div>`).join('')}</div>
+      <div class="grid grid-cols-7 gap-1">${calCells}</div>
+    </div>
+  </div>`;
+}
+
+// ═══ PATIENTS ═══
+function renderPatients() {
+  document.getElementById('page-title').textContent='Pacientes';
+  document.getElementById('page-subtitle').textContent=patients.length+' pacientes registrados';
+  document.getElementById('page-actions').innerHTML=`<button onclick="openNewPatient()" class="btn-primary">+ Nuevo paciente</button>`;
+
+  const q=state.patientSearch.toLowerCase();
+  const filtered=q?patients.filter(p=>p.name.toLowerCase().includes(q)||p.phone.includes(q)||p.email.toLowerCase().includes(q)||p.insurance.toLowerCase().includes(q)):patients;
+
+  const rows=filtered.length?filtered.map(p=>{
+    const cnt=getApptCount(p.id);
+    return `<tr class="hover:bg-slate-50 transition-colors">
+      <td class="px-5 py-3"><div class="flex items-center gap-3">${avatarHtml(p.name,'9')}
+        <div><span onclick="navigate('patient-detail',${p.id})" class="font-semibold text-slate-800 hover:text-blue-600 cursor-pointer text-sm">${p.name}</span>
+        ${p.birth?`<p class="text-xs text-slate-400">Nac: ${fmtDate(p.birth)}</p>`:''}</div>
+      </div></td>
+      <td class="px-4 py-3 hidden md:table-cell">
+        ${p.phone?`<p class="text-sm text-slate-700">📞 ${p.phone}</p>`:''}
+        ${p.email?`<p class="text-xs text-slate-400">✉ ${p.email}</p>`:''}
+      </td>
+      <td class="px-4 py-3 text-sm text-slate-500 hidden lg:table-cell">${p.insurance||'—'}</td>
+      <td class="px-4 py-3 text-center"><span class="bg-blue-100 text-blue-700 text-xs font-bold px-2.5 py-1 rounded-full">${cnt}</span></td>
+      <td class="px-4 py-3"><div class="flex items-center gap-1 justify-end">
+        <button onclick="openEditPatient(${p.id})" class="btn-outline text-xs px-2.5 py-1.5">Editar</button>
+        <button onclick="deletePatient(${p.id},'${p.name.replace(/'/g,"\\'")}')" class="btn-danger">Eliminar</button>
+      </div></td>
+    </tr>`;
+  }).join('') : `<tr><td colspan="5" class="px-5 py-12 text-center text-slate-400">No se encontraron pacientes.</td></tr>`;
+
+  document.getElementById('content').innerHTML=`
+  <div class="flex gap-3 mb-5">
+    <input type="text" value="${state.patientSearch}" onkeyup="state.patientSearch=this.value;renderPatients()" placeholder="Buscar por nombre, teléfono, email u obra social..." class="flex-1 border border-slate-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+    ${q?`<button onclick="state.patientSearch='';renderPatients()" class="btn-outline">Limpiar</button>`:''}
+  </div>
+  <div class="card p-0 overflow-hidden">
+    <table class="w-full">
+      <thead class="bg-slate-50 border-b border-slate-200"><tr>
+        <th class="text-left px-5 py-3 text-xs font-semibold text-slate-500 uppercase">Paciente</th>
+        <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase hidden md:table-cell">Contacto</th>
+        <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase hidden lg:table-cell">Obra social</th>
+        <th class="text-center px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Turnos</th>
+        <th class="px-4 py-3"></th>
+      </tr></thead>
+      <tbody class="divide-y divide-slate-100">${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+// ═══ PATIENT DETAIL ═══
+function renderPatientDetail() {
+  const p=getPatient(state.patientId); if(!p){navigate('patients');return;}
+  const appts=getPatientAppts(p.id);
+  document.getElementById('page-title').textContent=p.name;
+  document.getElementById('page-subtitle').textContent='Ficha del paciente';
+  document.getElementById('page-actions').innerHTML=`<button onclick="navigate('patients')" class="btn-outline">← Volver</button>`;
+
+  const apptRows=appts.length?appts.map(a=>{
+    const prof=getProf(a.profId);
+    const isCompleted=a.status==='completed';
+    const hasClinical=isCompleted&&(a.diagnostico||a.observaciones||a.receta);
+    const hasImages=isCompleted&&a.imagenes&&a.imagenes.length>0;
+    const specColor=prof?SPEC_COLORS[prof.specialty]||{bg:'bg-slate-100',text:'text-slate-600'}:{bg:'bg-slate-100',text:'text-slate-600'};
+    return `<div class="rounded-xl border ${isCompleted?'border-slate-200':'border-dashed border-slate-200'} overflow-hidden">
+      <div class="flex items-center gap-3 p-3 ${isCompleted?'bg-white hover:bg-slate-50':'bg-slate-50'} cursor-pointer" onclick="this.nextElementSibling&&this.nextElementSibling.classList.toggle('hidden')">
+        <div class="text-center min-w-[72px] bg-slate-100 rounded-lg py-2 px-1">
+          <p class="text-xs text-slate-500">${fmtDate(a.date)}</p>
+          <p class="font-bold text-slate-800 text-sm">${a.time}</p>
+          <p class="text-xs text-slate-400">${a.duration}min</p>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-sm font-semibold text-slate-800">${a.reason||'Sin motivo'}</p>
+          <p class="text-xs mt-0.5 ${specColor.text}">${prof?prof.name+' · '+prof.specialty:''}</p>
+          ${hasClinical?`<p class="text-xs text-blue-500 mt-0.5">🩺 Ver detalle clínico ▾</p>`:(isCompleted?`<p class="text-xs text-slate-400 mt-0.5">Sin registro clínico</p>`:`<p class="text-xs text-slate-400 mt-0.5">Turno próximo</p>`)}
+        </div>
+        ${hasImages?`<span class="text-xs bg-violet-100 text-violet-600 font-semibold px-2 py-0.5 rounded-full">🩻 ${a.imagenes.length} imagen${a.imagenes.length>1?'es':''}</span>`:''}
+        ${badgeHtml(a.status)}
+      </div>
+      ${hasClinical||hasImages?`
+      <div class="hidden px-4 py-3 bg-blue-50 space-y-3 text-sm border-t border-blue-100">
+        ${a.diagnostico?`<div><p class="text-xs font-bold text-blue-700 uppercase tracking-wide mb-1">🔍 Diagnóstico</p><p class="text-slate-700">${a.diagnostico}</p></div>`:''}
+        ${a.observaciones?`<div><p class="text-xs font-bold text-slate-600 uppercase tracking-wide mb-1">📝 Observaciones</p><p class="text-slate-700">${a.observaciones}</p></div>`:''}
+        ${a.receta?`<div class="bg-green-50 border border-green-200 rounded-lg p-2"><p class="text-xs font-bold text-green-700 uppercase tracking-wide mb-1">💊 Receta / Medicación</p><p class="text-slate-700">${a.receta}</p></div>`:''}
+        ${hasImages?`<div><p class="text-xs font-bold text-violet-700 uppercase tracking-wide mb-2">🩻 Imágenes / Radiografías</p><div class="flex flex-wrap gap-2">${a.imagenes.map(img=>`<div class="relative group"><img src="${img.url}" alt="${img.nombre}" class="w-24 h-24 object-cover rounded-lg border border-violet-200 cursor-pointer" onclick="window.open('${img.url}','_blank')"/><p class="text-xs text-slate-500 text-center mt-1 truncate w-24">${img.nombre}</p></div>`).join('')}</div></div>`:''}
+      </div>`:''}
+    </div>`;
+  }).join('') : `<div class="text-center py-10 text-slate-400"><p class="text-3xl mb-2">📋</p><p>Sin turnos registrados</p></div>`;
+
+  document.getElementById('content').innerHTML=`
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="card">
+      <div class="flex items-center gap-4 mb-5">
+        <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center"><span class="text-blue-600 font-extrabold text-2xl">${p.name[0].toUpperCase()}</span></div>
+        <div><h2 class="font-bold text-slate-800 text-lg">${p.name}</h2><p class="text-slate-500 text-sm">Paciente desde ${fmtDate(p.createdAt)}</p></div>
+      </div>
+      <div class="space-y-3">
+        ${p.phone?`<div class="flex items-center gap-2"><span class="text-slate-400">📞</span><span class="text-sm text-slate-700">${p.phone}</span></div>`:''}
+        ${p.email?`<div class="flex items-center gap-2"><span class="text-slate-400">✉</span><span class="text-sm text-slate-700">${p.email}</span></div>`:''}
+        ${p.dni?`<div class="flex items-center gap-2"><span class="text-slate-400">🪪</span><span class="text-sm text-slate-700">DNI: ${p.dni}</span></div>`:''}
+        ${p.birth?`<div class="flex items-center gap-2"><span class="text-slate-400">🎂</span><span class="text-sm text-slate-700">${fmtDate(p.birth)}</span></div>`:''}
+        ${p.insurance?`<div class="flex items-center gap-2"><span class="text-slate-400">🏥</span><span class="bg-indigo-100 text-indigo-700 text-xs font-semibold px-2 py-0.5 rounded-full">${p.insurance}</span></div>`:''}
+      </div>
+      ${p.notes?`<div class="mt-5 p-3 bg-yellow-50 border border-yellow-200 rounded-lg"><p class="text-xs font-semibold text-yellow-800 mb-1">Notas clínicas</p><p class="text-sm text-slate-700">${p.notes}</p></div>`:''}
+      <div class="mt-5 pt-5 border-t border-slate-100 space-y-2">
+        <button onclick="openNewAppt(${p.id})" class="btn-primary w-full">+ Nuevo turno</button>
+        <button onclick="openEditPatient(${p.id})" class="btn-outline w-full">Editar datos</button>
+      </div>
+    </div>
+    <div class="lg:col-span-2 card">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="font-bold text-slate-800">Historial médico (${appts.length} consultas)</h3>
+        <span class="text-xs text-slate-400">Hacé click en una consulta para ver el detalle</span>
+      </div>
+      <div class="space-y-2">${apptRows}</div>
+    </div>
+  </div>`;
+}
+
+// ═══ PROFESSIONALS ═══
+function renderProfessionals() {
+  document.getElementById('page-title').textContent='Profesionales';
+  document.getElementById('page-subtitle').textContent=professionals.length+' profesionales activos';
+  document.getElementById('page-actions').innerHTML=`<button onclick="toast('Función disponible en el sistema real')" class="btn-primary">+ Nuevo profesional</button>`;
+
+  const cards=professionals.map(p=>{
+    const cnt=appointments.filter(a=>a.profId===p.id).length;
+    const today=appointments.filter(a=>a.profId===p.id&&a.date===TODAY).length;
+    const c=SPEC_COLORS[p.specialty]||{bg:'bg-slate-100',text:'text-slate-600'};
+    return `<div class="card">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background:${p.color}22">
+          <span class="font-extrabold text-lg" style="color:${p.color}">${p.name[0]}</span>
+        </div>
+        <div class="flex-1">
+          <p class="font-bold text-slate-800">${p.name}</p>
+          <span class="${c.bg} ${c.text} text-xs font-semibold px-2 py-0.5 rounded-full">${p.specialty}</span>
+        </div>
+        <div class="w-2 h-2 bg-green-400 rounded-full mt-2" title="Activo"></div>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-center">
+        <div class="bg-slate-50 rounded-lg py-2">
+          <p class="text-xl font-extrabold text-slate-800">${today}</p>
+          <p class="text-xs text-slate-500">hoy</p>
+        </div>
+        <div class="bg-slate-50 rounded-lg py-2">
+          <p class="text-xl font-extrabold text-slate-800">${cnt}</p>
+          <p class="text-xs text-slate-500">total turnos</p>
+        </div>
+      </div>
+      <button onclick="state.agendaProf='${p.id}';state.agendaSpec='';state.agendaDate='';navigate('agenda')" class="btn-outline w-full mt-3 text-xs">Ver agenda →</button>
+    </div>`;
+  }).join('');
+
+  document.getElementById('content').innerHTML=`
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">${cards}</div>`;
+}
+
+// ═══ STATS ═══
+function renderStats() {
+  document.getElementById('page-title').textContent='Estadísticas';
+  document.getElementById('page-subtitle').textContent='Resumen de la clínica';
+  document.getElementById('page-actions').innerHTML='';
+
+  const total      = appointments.length;
+  const completed  = appointments.filter(a=>a.status==='completed').length;
+  const cancelled  = appointments.filter(a=>a.status==='cancelled').length;
+  const pending    = appointments.filter(a=>a.status==='pending').length;
+  const confirmed  = appointments.filter(a=>a.status==='confirmed').length;
+  const attended   = completed;
+  const absent     = cancelled;
+  const attendRate = total>0?Math.round(attended/total*100):0;
+  const absentRate = total>0?Math.round(absent/total*100):0;
+
+  // Turnos por mes
+  const MONTHS=[{pfx:'2026-03',label:'Mar'},{pfx:'2026-04',label:'Abr'},{pfx:'2026-05',label:'May'},{pfx:'2026-06',label:'Jun'}];
+  const monthCnts  = MONTHS.map(m=>appointments.filter(a=>a.date.startsWith(m.pfx)).length);
+  const monthCompl = MONTHS.map(m=>appointments.filter(a=>a.date.startsWith(m.pfx)&&a.status==='completed').length);
+  const maxM       = Math.max(...monthCnts,1);
+
+  // Por especialidad
+  const specStats={};
+  appointments.forEach(a=>{const pr=getProf(a.profId);if(pr)specStats[pr.specialty]=(specStats[pr.specialty]||0)+1;});
+  const specEntries=Object.entries(specStats).sort((a,b)=>b[1]-a[1]);
+
+  // Por profesional
+  const profStats=professionals.map(p=>{
+    const total=appointments.filter(a=>a.profId===p.id).length;
+    const comp =appointments.filter(a=>a.profId===p.id&&a.status==='completed').length;
+    const canc =appointments.filter(a=>a.profId===p.id&&a.status==='cancelled').length;
+    return {prof:p,total,comp,canc};
+  }).sort((a,b)=>b.total-a.total);
+  const maxProfTotal=Math.max(...profStats.map(p=>p.total),1);
+
+  // Por obra social
+  const obraMap={};
+  patients.forEach(p=>{const o=p.insurance||'Particular';obraMap[o]=(obraMap[o]||0)+1;});
+  const obraEntries=Object.entries(obraMap).sort((a,b)=>b[1]-a[1]);
+  const obraColors=['#6366f1','#3b82f6','#0ea5e9','#10b981','#f59e0b','#94a3b8'];
+
+  document.getElementById('content').innerHTML=`
+  <!-- KPIs -->
+  <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+    <div class="stat-card text-center">
+      <p class="text-3xl font-extrabold text-slate-800">${total}</p>
+      <p class="text-xs text-slate-500 mt-1">Turnos totales</p>
+    </div>
+    <div class="stat-card text-center">
+      <p class="text-3xl font-extrabold text-green-600">${completed}</p>
+      <p class="text-xs text-slate-500 mt-1">Completados</p>
+    </div>
+    <div class="stat-card text-center">
+      <p class="text-3xl font-extrabold text-blue-600">${attendRate}%</p>
+      <p class="text-xs text-slate-500 mt-1">Presentismo</p>
+    </div>
+    <div class="stat-card text-center">
+      <p class="text-3xl font-extrabold text-red-500">${absentRate}%</p>
+      <p class="text-xs text-slate-500 mt-1">Ausentismo</p>
+    </div>
+    <div class="stat-card text-center">
+      <p class="text-3xl font-extrabold text-slate-800">${patients.length}</p>
+      <p class="text-xs text-slate-500 mt-1">Pacientes</p>
+    </div>
+  </div>
+
+  <!-- Fila 1: Turnos por mes + Presentismo/Ausentismo -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+    <!-- Turnos por mes -->
+    <div class="card">
+      <h3 class="font-bold text-slate-800 mb-1">Turnos por mes</h3>
+      <p class="text-xs text-slate-400 mb-4">Azul oscuro = completados · Azul claro = total</p>
+      <div style="display:flex;align-items:flex-end;gap:10px;height:120px;">
+        ${monthCnts.map((c,i)=>{
+          const isBest=c===Math.max(...monthCnts);
+          const compH=c>0?Math.round(monthCompl[i]/c*100):0;
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;">
+            <span style="font-size:11px;font-weight:800;color:${isBest?'#d97706':'#64748b'};">${c}${isBest?' ⭐':''}</span>
+            <div style="width:100%;height:100px;background:#e2e8f0;border-radius:6px 6px 0 0;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;position:relative;" title="${MONTHS[i].label}: ${monthCompl[i]} completados de ${c}">
+              <div style="width:100%;height:${Math.round(c/maxM*100)}%;background:#bfdbfe;position:absolute;bottom:0;border-radius:6px 6px 0 0;"></div>
+              <div style="width:100%;height:${Math.round(monthCompl[i]/maxM*100)}%;background:#2563eb;position:absolute;bottom:0;border-radius:6px 6px 0 0;"></div>
+            </div>
+            <span style="font-size:11px;color:#64748b;font-weight:600;">${MONTHS[i].label}</span>
+          </div>`;
+        }).join('')}
+      </div>
+      <div class="flex gap-4 mt-3 text-xs">
+        <span class="flex items-center gap-1"><span style="width:10px;height:10px;background:#2563eb;border-radius:2px;display:inline-block;"></span>Completados</span>
+        <span class="flex items-center gap-1"><span style="width:10px;height:10px;background:#bfdbfe;border-radius:2px;display:inline-block;"></span>Total</span>
+      </div>
+    </div>
+
+    <!-- Presentismo y ausentismo -->
+    <div class="card">
+      <h3 class="font-bold text-slate-800 mb-4">Presentismo y Ausentismo</h3>
+      <div class="space-y-4">
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="font-semibold text-green-700">✅ Presentismo</span>
+            <span class="font-extrabold text-green-700">${attended} turnos · ${attendRate}%</span>
+          </div>
+          <div class="h-4 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-4 bg-green-500 rounded-full transition-all" style="width:${attendRate}%"></div>
+          </div>
+        </div>
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="font-semibold text-yellow-700">⏳ Pendientes / Confirmados</span>
+            <span class="font-extrabold text-yellow-700">${pending+confirmed} turnos · ${total>0?Math.round((pending+confirmed)/total*100):0}%</span>
+          </div>
+          <div class="h-4 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-4 bg-yellow-400 rounded-full transition-all" style="width:${total>0?Math.round((pending+confirmed)/total*100):0}%"></div>
+          </div>
+        </div>
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="font-semibold text-red-700">❌ Ausentismo (cancelados)</span>
+            <span class="font-extrabold text-red-700">${absent} turnos · ${absentRate}%</span>
+          </div>
+          <div class="h-4 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-4 bg-red-500 rounded-full transition-all" style="width:${absentRate}%"></div>
+          </div>
+        </div>
+        <div class="mt-4 p-3 rounded-xl ${attendRate>=80?'bg-green-50 border border-green-200':'bg-yellow-50 border border-yellow-200'}">
+          <p class="text-sm font-bold ${attendRate>=80?'text-green-700':'text-yellow-700'}">${attendRate>=80?'📈 Excelente tasa de asistencia':'⚠️ Tasa de asistencia mejorable'}</p>
+          <p class="text-xs text-slate-500 mt-0.5">Promedio del sector: 78% de presentismo</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Fila 2: Por profesional -->
+  <div class="card mb-6">
+    <h3 class="font-bold text-slate-800 mb-4">Rendimiento por profesional</h3>
+    <div class="space-y-3">
+      ${profStats.map(({prof,total:t,comp,canc},i)=>{
+        const pct=t>0?Math.round(comp/t*100):0;
+        return `<div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-extrabold" style="background:${prof.color}22;color:${prof.color};">${i+1}</div>
+          <div class="flex-1 min-w-0">
+            <div class="flex justify-between mb-1">
+              <div>
+                <span class="text-sm font-semibold text-slate-800">${prof.name}</span>
+                <span class="ml-2 text-xs ${SPEC_COLORS[prof.specialty]?SPEC_COLORS[prof.specialty].text:'text-slate-500'} font-medium">${prof.specialty}</span>
+              </div>
+              <span class="text-xs text-slate-500">${t} turnos · <span class="text-green-600 font-bold">${pct}% asistencia</span></span>
+            </div>
+            <div class="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+              <div style="height:100%;width:${Math.round(t/maxProfTotal*100)}%;background:${prof.color};border-radius:999px;transition:width .4s;"></div>
+            </div>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>
+
+  <!-- Fila 3: Por especialidad + Por obra social -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Por especialidad -->
+    <div class="card">
+      <h3 class="font-bold text-slate-800 mb-4">Turnos por especialidad</h3>
+      <div class="space-y-3">
+        ${specEntries.map(([s,c])=>{
+          const col=SPEC_COLORS[s]||{bg:'bg-slate-100',text:'text-slate-600',dot:'bg-slate-400'};
+          return `<div>
+            <div class="flex justify-between text-sm mb-1">
+              <span class="${col.bg} ${col.text} text-xs font-semibold px-2 py-0.5 rounded-full">${s}</span>
+              <span class="font-bold text-slate-700">${c} <span class="text-slate-400 font-normal">(${Math.round(c/total*100)}%)</span></span>
+            </div>
+            <div class="h-3 bg-slate-100 rounded-full overflow-hidden">
+              <div class="${col.dot} h-3 rounded-full" style="width:${Math.round(c/specEntries[0][1]*100)}%;transition:width .4s;"></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- Por obra social -->
+    <div class="card">
+      <h3 class="font-bold text-slate-800 mb-4">Pacientes por obra social</h3>
+      <div class="space-y-3">
+        ${obraEntries.map(([nombre,cant],i)=>`
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="font-semibold text-slate-700 flex items-center gap-1.5">
+              <span style="width:10px;height:10px;border-radius:50%;background:${obraColors[i%obraColors.length]};display:inline-block;"></span>
+              ${nombre}${i===0?' 🏆':''}
+            </span>
+            <span class="font-bold" style="color:${obraColors[i%obraColors.length]};">${cant} <span class="text-slate-400 font-normal">(${Math.round(cant/patients.length*100)}%)</span></span>
+          </div>
+          <div class="h-3 bg-slate-100 rounded-full overflow-hidden">
+            <div style="height:100%;width:${Math.round(cant/obraEntries[0][1]*100)}%;background:${obraColors[i%obraColors.length]};border-radius:999px;transition:width .5s;"></div>
+          </div>
+        </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══ REMINDERS ═══
+function renderReminders() {
+  document.getElementById('page-title').textContent='Recordatorios WhatsApp';
+  document.getElementById('page-subtitle').textContent='Enviá recordatorios automáticos';
+  document.getElementById('page-actions').innerHTML='';
+  const tAppts=getTomorrowAppts().sort((a,b)=>a.time.localeCompare(b.time));
+  const rows=tAppts.map(a=>{
+    const p=getPatient(a.patientId); const prof=getProf(a.profId);
+    return `<div class="flex items-center gap-4 p-4 border border-slate-100 rounded-xl hover:bg-slate-50">
+      ${avatarHtml(p?p.name:'?','10')}
+      <div class="flex-1">
+        <p class="font-semibold text-slate-800">${p?p.name:'—'}</p>
+        <p class="text-xs text-slate-500">📅 Mañana ${fmtDate(a.date)} · ⏰ ${a.time} hs · ${a.reason||'Consulta'}</p>
+        <p class="text-xs text-slate-400 mt-0.5">${prof?prof.name+' · '+prof.specialty:''} · 📞 ${p&&p.phone?p.phone:'Sin teléfono'}</p>
+      </div>
+      <button onclick="sendReminder(this,'${p?p.name:''}')" class="${p&&p.phone?'bg-green-500 hover:bg-green-600 text-white':'bg-slate-200 text-slate-400 cursor-not-allowed'} text-xs font-semibold px-3 py-2 rounded-lg transition-colors" ${!p||!p.phone?'disabled':''}>
+        ${p&&p.phone?'📲 Enviar':'Sin número'}
+      </button>
+    </div>`;
+  }).join('')||`<div class="text-center py-10 text-slate-400"><p class="text-3xl mb-2">🎉</p><p>No hay turnos mañana</p></div>`;
+  document.getElementById('content').innerHTML=`
+  <div class="card mb-5">
+    <div class="flex items-center gap-3 mb-4">
+      <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center"><svg class="w-6 h-6 text-green-600" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/></svg></div>
+      <div><h2 class="font-bold text-slate-800">Turnos de mañana — ${tAppts.length} paciente(s)</h2><p class="text-xs text-slate-500">Enviá recordatorios a cada paciente</p></div>
+      <button onclick="document.querySelectorAll('#content button[onclick^=\\'sendReminder\\']').forEach(b=>{if(!b.disabled)b.click()})" class="ml-auto btn-primary">📲 Enviar todos</button>
+    </div>
+    <div class="space-y-3">${rows}</div>
+  </div>`;
+}
+function sendReminder(btn,name){btn.textContent='✅ Enviado';btn.style.background='#e2e8f0';btn.style.color='#64748b';btn.disabled=true;toast('Recordatorio enviado a '+name);}
+
+// ═══ BOT ═══
+let botState='MENU',botSpec='',botProf='',botDate='',botTime='',botName='';
+const botDates=['Viernes 29/05','Lunes 01/06','Martes 02/06','Miércoles 03/06'];
+const botTimes=['09:00','10:00','11:00','14:00','15:00'];
+const botSpecs=Object.keys(SPEC_COLORS);
+
+function renderBot() {
+  document.getElementById('page-title').textContent='Bot WhatsApp';
+  document.getElementById('page-subtitle').textContent='Simulador interactivo — flujo de especialidades';
+  document.getElementById('page-actions').innerHTML='';
+  document.getElementById('content').innerHTML=`
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
+      <div class="bg-[#111b21] rounded-2xl overflow-hidden shadow-2xl" style="height:520px;display:flex;flex-direction:column;">
+        <div class="bg-[#202c33] px-4 py-3 flex items-center gap-3">
+          <div class="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center"><span class="text-white font-bold text-sm">C</span></div>
+          <div><p class="text-white font-semibold text-sm">Centro Médico Integral</p><p class="text-xs text-green-400">en línea</p></div>
+          <button onclick="resetBot()" class="ml-auto text-xs text-slate-400 hover:text-white border border-slate-600 px-2 py-1 rounded-lg">↺ Reiniciar</button>
+        </div>
+        <div id="bot-msgs" class="flex-1 overflow-y-auto px-4 py-3 space-y-2" style="background:#0b141a"></div>
+        <div class="bg-[#202c33] px-3 py-2 flex gap-2">
+          <input id="bot-input" type="text" placeholder="Escribí un mensaje..." onkeydown="if(event.key==='Enter')sendBotMsg()"
+            class="flex-1 bg-[#2a3942] text-white text-sm rounded-xl px-4 py-2 outline-none placeholder-slate-500"/>
+          <button onclick="sendBotMsg()" class="bg-green-500 hover:bg-green-400 text-white rounded-full w-10 h-10 flex items-center justify-center">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <button onclick="quickBot('hola')" class="text-xs bg-white border border-slate-200 rounded-full px-3 py-1.5 hover:bg-slate-50">👋 Hola</button>
+        <button onclick="quickBot('1')" class="text-xs bg-white border border-slate-200 rounded-full px-3 py-1.5 hover:bg-slate-50">1 (sacar turno)</button>
+        <button onclick="quickBot('2')" class="text-xs bg-white border border-slate-200 rounded-full px-3 py-1.5 hover:bg-slate-50">2 (cancelar)</button>
+        <button onclick="quickBot('si')" class="text-xs bg-white border border-slate-200 rounded-full px-3 py-1.5 hover:bg-slate-50">SI (confirmar)</button>
+      </div>
+    </div>
+    <div class="space-y-4">
+      <div class="card">
+        <h3 class="font-semibold text-slate-800 mb-3 text-sm">ℹ️ Flujo de la clínica</h3>
+        <div class="space-y-2 text-xs text-slate-600">
+          <p>1️⃣ Paciente escribe <strong>hola</strong></p>
+          <p>2️⃣ Bot muestra menú de especialidades</p>
+          <p>3️⃣ Paciente elige especialidad</p>
+          <p>4️⃣ Si hay varios profesionales, elige profesional</p>
+          <p>5️⃣ Elige fecha disponible</p>
+          <p>6️⃣ Elige horario</p>
+          <p>7️⃣ Confirma el turno</p>
+        </div>
+      </div>
+      <div class="card">
+        <h3 class="font-semibold text-slate-800 mb-3 text-sm">📊 Este mes</h3>
+        <div class="space-y-2 text-sm">
+          <div class="flex justify-between"><span class="text-slate-500">Turnos via bot</span><span class="font-bold">34</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Mensajes recibidos</span><span class="font-bold">128</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Conversión</span><span class="font-bold text-green-600">81%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  resetBot();
+}
+
+function resetBot(){
+  botState='MENU';botSpec='';botProf='';botDate='';botTime='';botName='';
+  const msgs=document.getElementById('bot-msgs');if(msgs)msgs.innerHTML='';
+  setTimeout(()=>addBotMsg('bot','¡Hola! 👋 Bienvenido a *Centro Médico Integral*\n\n¿En qué puedo ayudarte?\n\n1️⃣ Sacar un turno\n2️⃣ Cancelar un turno\n3️⃣ Ver mis turnos'),300);
+}
+function addBotMsg(who,text){
+  const msgs=document.getElementById('bot-msgs');if(!msgs)return;
+  const isBot=who==='bot';
+  const div=document.createElement('div');
+  div.className=`flex ${isBot?'justify-start':'justify-end'}`;
+  const fmt=text.replace(/\*(.*?)\*/g,'<strong>$1</strong>').replace(/\n/g,'<br/>');
+  div.innerHTML=`<div class="max-w-[78%] rounded-2xl ${isBot?'rounded-tl-sm bg-[#202c33]':'rounded-tr-sm bg-[#005c4b]'} text-white px-3 py-2 text-sm shadow">${fmt}<p class="text-xs opacity-40 mt-1 text-right">${new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}</p></div>`;
+  msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;
+}
+function sendBotMsg(){
+  const inp=document.getElementById('bot-input');if(!inp||!inp.value.trim())return;
+  const msg=inp.value.trim();inp.value='';
+  addBotMsg('user',msg);setTimeout(()=>processBotMsg(msg),500);
+}
+function quickBot(msg){const inp=document.getElementById('bot-input');if(inp)inp.value=msg;sendBotMsg();}
+function processBotMsg(text){
+  text=text.toLowerCase().trim();
+  if(text==='hola'||text==='inicio'||text==='menu'){
+    botState='MENU';
+    addBotMsg('bot','Hola 👋 ¿En qué puedo ayudarte?\n\n1️⃣ Sacar un turno\n2️⃣ Cancelar un turno\n3️⃣ Ver mis turnos');return;
+  }
+  if(botState==='MENU'){
+    if(text==='1'){
+      botState='ESPECIALIDAD';
+      addBotMsg('bot','🏥 ¿Qué especialidad necesitás?\n\n1️⃣ Cardiología\n2️⃣ Kinesiología\n3️⃣ Odontología\n4️⃣ Pediatría\n\nElegí el número 👆');
+    } else if(text==='2'){addBotMsg('bot','Para cancelar escribinos tu nombre y la fecha del turno. Te confirmamos en breve. 📞');botState='MENU';}
+    else if(text==='3'){addBotMsg('bot','📋 Tus próximos turnos:\n\n📅 Viernes 29/05 · ⏰ 10:00 hs · Odontología · Dra. Méndez\n\nEscribí *hola* para volver.');}
+    else{addBotMsg('bot','No entendí 😅 Escribí *1*, *2* o *3*.');}return;
+  }
+  if(botState==='ESPECIALIDAD'){
+    const specs=['Cardiología','Kinesiología','Odontología','Pediatría'];
+    const idx=parseInt(text)-1;
+    if(idx>=0&&idx<specs.length){
+      botSpec=specs[idx];
+      // Kinesiología y Odontología tienen múltiples profesionales
+      if(botSpec==='Kinesiología'){
+        botState='PROFESIONAL';
+        addBotMsg('bot','👨‍⚕️ ¿Con qué profesional de *Kinesiología* querés el turno?\n\n1️⃣ Lic. Pablo Vega\n2️⃣ Lic. Marta Suárez\n\nElegí el número 👆');
+      } else if(botSpec==='Odontología'){
+        botState='PROFESIONAL';
+        addBotMsg('bot','👨‍⚕️ ¿Con qué profesional de *Odontología* querés el turno?\n\n1️⃣ Dra. Ana Méndez\n2️⃣ Dra. Elena Torres\n\nElegí el número 👆');
+      } else {
+        botProf=botSpec==='Cardiología'?'Dr. Lucía Morales':'Dr. Carlos Rojas';
+        botState='FECHA';
+        addBotMsg('bot','📅 Fechas disponibles con *'+botProf+'* ('+botSpec+'):\n\n1️⃣ '+botDates[0]+'\n2️⃣ '+botDates[1]+'\n3️⃣ '+botDates[2]+'\n4️⃣ '+botDates[3]+'\n\nElegí el número 👆');
+      }
+    } else {addBotMsg('bot','Por favor elegí un número del 1 al 4 👆');}return;
+  }
+  if(botState==='PROFESIONAL'){
+    const idx=parseInt(text)-1;
+    if(idx===0){botProf=botSpec==='Kinesiología'?'Lic. Pablo Vega':'Dra. Ana Méndez';}
+    else if(idx===1){botProf=botSpec==='Kinesiología'?'Lic. Marta Suárez':'Dra. Elena Torres';}
+    else{addBotMsg('bot','Por favor elegí *1* o *2* 👆');return;}
+    botState='FECHA';
+    addBotMsg('bot','📅 Fechas disponibles con *'+botProf+'* ('+botSpec+'):\n\n1️⃣ '+botDates[0]+'\n2️⃣ '+botDates[1]+'\n3️⃣ '+botDates[2]+'\n4️⃣ '+botDates[3]+'\n\nElegí el número 👆');return;
+  }
+  if(botState==='FECHA'){
+    const idx=parseInt(text)-1;
+    if(idx>=0&&idx<botDates.length){botDate=botDates[idx];botState='HORA';
+      addBotMsg('bot','⏰ Horarios disponibles el *'+botDate+'*:\n\n1️⃣ 09:00 hs\n2️⃣ 10:00 hs\n3️⃣ 11:00 hs\n4️⃣ 14:00 hs\n5️⃣ 15:00 hs\n\nElegí el número 👆');
+    }else{addBotMsg('bot','Elegí un número del 1 al 4 👆');}return;
+  }
+  if(botState==='HORA'){
+    const idx=parseInt(text)-1;
+    if(idx>=0&&idx<5){botTime=botTimes[idx];botState='NOMBRE';addBotMsg('bot','Perfecto! 👍\n\n¿Cuál es tu nombre completo? ✍️');}
+    else{addBotMsg('bot','Elegí un número del 1 al 5 👆');}return;
+  }
+  if(botState==='NOMBRE'){
+    if(text.length<3){addBotMsg('bot','Por favor ingresá tu nombre completo 😊');return;}
+    botName=text.split(' ').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+    botState='CONFIRMAR';
+    addBotMsg('bot','Confirmá tu turno:\n\n👤 *'+botName+'*\n🏥 '+botSpec+' — '+botProf+'\n📅 '+botDate+'\n⏰ '+botTime+' hs\n\nRespondé *SI* para confirmar ✅\nRespondé *NO* para elegir otra fecha ❌');return;
+  }
+  if(botState==='CONFIRMAR'){
+    if(text==='si'||text==='sí'||text==='s'){
+      botState='MENU';
+      addBotMsg('bot','✅ ¡Turno confirmado!\n\n👤 *'+botName+'*\n🏥 '+botSpec+' — '+botProf+'\n📅 '+botDate+'\n⏰ '+botTime+' hs\n\n¡Te esperamos! Cualquier cambio escribinos. 👋');
+    }else if(text==='no'||text==='n'){
+      botState='FECHA';
+      addBotMsg('bot','Sin problema 😊\n\n📅 Elegí otra fecha:\n\n1️⃣ '+botDates[0]+'\n2️⃣ '+botDates[1]+'\n3️⃣ '+botDates[2]+'\n4️⃣ '+botDates[3]);
+    }else{addBotMsg('bot','Respondé *SI* para confirmar o *NO* para cambiar 😊');}return;
+  }
+}
+
+// ═══ SETTINGS ═══
+function renderSettings(){
+  document.getElementById('page-title').textContent='Configuración';
+  document.getElementById('page-subtitle').textContent='Datos de la clínica y cuenta';
+  document.getElementById('page-actions').innerHTML='';
+  document.getElementById('content').innerHTML=`
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="card">
+      <h3 class="font-bold text-slate-800 mb-4">Datos de la clínica</h3>
+      <div class="space-y-3">
+        <div><label class="form-label">Nombre de la clínica</label><input type="text" value="Centro Médico Integral" class="form-input"/></div>
+        <div><label class="form-label">Teléfono</label><input type="text" value="+54 11 4000-5000" class="form-input"/></div>
+        <div><label class="form-label">Dirección</label><input type="text" value="Av. Santa Fe 2500, CABA" class="form-input"/></div>
+        <div><label class="form-label">WhatsApp del bot</label><input type="text" value="+54 9 11 4000-5000" class="form-input"/></div>
+        <button onclick="toast('Cambios guardados')" class="btn-primary">Guardar cambios</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3 class="font-bold text-slate-800 mb-4">Cuenta y plan</h3>
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+        <p class="font-bold text-amber-800">Plan Clínica</p>
+        <p class="text-xs text-amber-600 mt-1">Multi-profesional · Especialidades · Pacientes ilimitados · Bot + Recordatorios</p>
+      </div>
+      <div class="space-y-3">
+        <div><label class="form-label">Email</label><input type="email" value="admin@centromedico.com" class="form-input"/></div>
+        <div><label class="form-label">Contraseña actual</label><input type="password" placeholder="••••••••" class="form-input"/></div>
+        <div><label class="form-label">Nueva contraseña</label><input type="password" placeholder="••••••••" class="form-input"/></div>
+        <button onclick="toast('Contraseña actualizada')" class="btn-primary">Actualizar contraseña</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ═══ MODALS ═══
+function closeModal(id){document.getElementById(id).classList.add('hidden');}
+function openNewPatient(){
+  document.getElementById('modal-patient-title').textContent='Nuevo paciente';
+  document.getElementById('patient-edit-id').value='';
+  ['patient-name','patient-phone','patient-email','patient-dni','patient-birth','patient-insurance','patient-notes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  document.getElementById('modal-patient').classList.remove('hidden');
+}
+function openEditPatient(id){
+  const p=getPatient(id);if(!p)return;
+  document.getElementById('modal-patient-title').textContent='Editar paciente';
+  document.getElementById('patient-edit-id').value=id;
+  document.getElementById('patient-name').value=p.name;
+  document.getElementById('patient-phone').value=p.phone||'';
+  document.getElementById('patient-email').value=p.email||'';
+  document.getElementById('patient-dni').value=p.dni||'';
+  document.getElementById('patient-birth').value=p.birth||'';
+  document.getElementById('patient-insurance').value=p.insurance||'';
+  document.getElementById('patient-notes').value=p.notes||'';
+  document.getElementById('modal-patient').classList.remove('hidden');
+}
+function savePatient(e){
+  e.preventDefault();
+  const editId=document.getElementById('patient-edit-id').value;
+  const data={name:document.getElementById('patient-name').value.trim(),phone:document.getElementById('patient-phone').value.trim(),email:document.getElementById('patient-email').value.trim(),dni:document.getElementById('patient-dni').value.trim(),birth:document.getElementById('patient-birth').value,insurance:document.getElementById('patient-insurance').value.trim(),notes:document.getElementById('patient-notes').value.trim()};
+  if(editId){const p=getPatient(parseInt(editId));if(p)Object.assign(p,data);toast('Paciente actualizado');}
+  else{patients.push({id:nextPatientId++,...data,createdAt:TODAY});toast('Paciente agregado');}
+  closeModal('modal-patient');render();
+}
+function deletePatient(id,name){
+  if(!confirm('¿Eliminar a '+name+'?'))return;
+  patients=patients.filter(p=>p.id!==id);appointments=appointments.filter(a=>a.patientId!==id);
+  toast('Paciente eliminado');renderPatients();
+}
+function openNewAppt(patientId){
+  const sel=document.getElementById('appt-patient');
+  sel.innerHTML='<option value="">Seleccionar paciente...</option>'+patients.map(p=>`<option value="${p.id}" ${p.id===patientId?'selected':''}>${p.name}</option>`).join('');
+  const psel=document.getElementById('appt-professional');
+  psel.innerHTML='<option value="">Seleccionar profesional...</option>'+professionals.map(p=>`<option value="${p.id}">${p.name} — ${p.specialty}</option>`).join('');
+  document.getElementById('appt-date').value=TODAY;
+  document.getElementById('appt-time').value='09:00';
+  document.getElementById('appt-reason').value='';
+  document.getElementById('modal-appt').classList.remove('hidden');
+}
+function saveAppt(e){
+  e.preventDefault();
+  const patientId=parseInt(document.getElementById('appt-patient').value);
+  const profId=parseInt(document.getElementById('appt-professional').value);
+  if(!patientId){alert('Seleccioná un paciente');return;}
+  appointments.push({id:nextApptId++,patientId,profId,date:document.getElementById('appt-date').value,time:document.getElementById('appt-time').value,duration:parseInt(document.getElementById('appt-duration').value),reason:document.getElementById('appt-reason').value.trim()||'Consulta',status:document.getElementById('appt-status').value});
+  closeModal('modal-appt');toast('Turno agregado');render();
+}
+function updateApptStatus(id,status){
+  const a=appointments.find(x=>x.id===id);if(a){a.status=status;toast('Estado actualizado');render();}
+}
+
+// INIT
+navigate('dashboard');
+</script>
+</body>
+</html>
