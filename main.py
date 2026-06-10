@@ -616,6 +616,18 @@ def api_appointments_by_date(
 # CHATBOT — WEBHOOK WHATSAPP (Twilio / Meta)
 # ═══════════════════════════════════════════════════════════════════════════════
 
+WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "botk2ia_webhook_secret")
+
+@app.get("/webhook/whatsapp/{clinic_id}")
+async def whatsapp_webhook_verify(clinic_id: int, request: Request):
+    """Verificación del webhook de Meta/WhatsApp."""
+    mode = request.query_params.get("hub.mode")
+    token = request.query_params.get("hub.verify_token")
+    challenge = request.query_params.get("hub.challenge")
+    if mode == "subscribe" and token == WHATSAPP_VERIFY_TOKEN:
+        return Response(content=challenge, media_type="text/plain")
+    return Response(content="Forbidden", status_code=403)
+
 @app.post("/webhook/whatsapp/{clinic_id}")
 async def whatsapp_webhook(
     clinic_id: int,
