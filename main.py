@@ -616,8 +616,6 @@ def api_appointments_by_date(
 # CHATBOT — WEBHOOK WHATSAPP (Twilio / Meta)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "botk2ia_webhook_secret")
-
 @app.get("/webhook/whatsapp/{clinic_id}")
 async def whatsapp_webhook_verify(clinic_id: int, request: Request):
     """Verificación del webhook de Meta/WhatsApp."""
@@ -689,6 +687,8 @@ async def chat_sim_send(
 # ═══════════════════════════════════════════════════════════════════════════════
 import os
 import hashlib
+
+WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "botk2ia_webhook_secret")
 
 ADMIN_PASSWORD_HASH = os.environ.get(
     "ADMIN_PASSWORD_HASH",
