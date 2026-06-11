@@ -242,6 +242,7 @@ def patient_create(
     email: str = Form(""),
     dni: str = Form(""),
     birth_date: str = Form(""),
+    insurance: str = Form(""),
     notes: str = Form(""),
     db: Session = Depends(database.get_db),
     clinic: models.Clinic = Depends(auth_module.get_current_clinic),
@@ -249,7 +250,7 @@ def patient_create(
     patient = models.Patient(
         clinic_id=clinic.id,
         name=name, phone=phone, email=email,
-        dni=dni, birth_date=birth_date, notes=notes,
+        dni=dni, birth_date=birth_date, insurance=insurance, notes=notes,
     )
     db.add(patient)
     db.commit()
@@ -264,6 +265,7 @@ def patient_edit(
     email: str = Form(""),
     dni: str = Form(""),
     birth_date: str = Form(""),
+    insurance: str = Form(""),
     notes: str = Form(""),
     db: Session = Depends(database.get_db),
     clinic: models.Clinic = Depends(auth_module.get_current_clinic),
@@ -276,6 +278,7 @@ def patient_edit(
     patient.email = email
     patient.dni = dni
     patient.birth_date = birth_date
+    patient.insurance = insurance
     patient.notes = notes
     db.commit()
     return RedirectResponse("/patients", status_code=302)
@@ -553,13 +556,21 @@ def send_all_reminders(
 @app.get("/settings", response_class=HTMLResponse)
 def settings_page(
     request: Request,
+    saved: str = "",
     db: Session = Depends(database.get_db),
     clinic: models.Clinic = Depends(auth_module.get_current_clinic),
 ):
+    import os as _os2
+    wa_phone_id = _os2.environ.get("WHATSAPP_PHONE_ID", "")
+    wa_token = _os2.environ.get("WHATSAPP_TOKEN", "")
+    webhook_url = str(request.base_url).rstrip("/") + "/webhook"
     return templates.TemplateResponse("settings.html", {
         "request": request,
         "clinic": clinic,
-        "saved": False,
+        "saved": bool(saved),
+        "wa_phone_id": wa_phone_id,
+        "wa_token_set": bool(wa_token),
+        "webhook_url": webhook_url,
     })
 
 
