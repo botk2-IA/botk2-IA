@@ -633,23 +633,42 @@ async def whatsapp_webhook(
     db: Session = Depends(database.get_db),
 ):
     """
-    Webhook que recibe mensajes de WhatsApp vía Twilio.
+    Webhook que recibe mensajes de WhatsApp vía Meta Cloud API.
     """
-    form_data = await request.form()
-    phone = form_data.get("From", "")
-    body  = form_data.get("Body", "").strip()
+    import httpx, os as _os
+    data = await request.json()
+    try:
+        entry = data["entry"][0]
+        changes = entry["changes"][0]["value"]
+        messages = changes.get("messages")
+        if not messages:
+            return {"status": "ok"}
+        msg = messages[0]
+        phone = msg["from"]
+        body = msg.get("text", {}).get("body", "").strip()
+    except (KeyError, IndexError):
+        return {"status": "ok"}
 
     clinic_obj = db.query(models.Clinic).filter_by(id=clinic_id, active=True).first()
     if not clinic_obj:
-        return Response(content="<Response/>", media_type="text/xml")
+        return {"status": "ok"}
 
     reply = chatbot.process_message(phone, body, db, clinic_id)
 
-    twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Message>{reply}</Message>
-</Response>"""
-    return Response(content=twiml, media_type="text/xml")
+    # Enviar respuesta via Meta API
+    wa_token = _os.environ.get("WHATSAPP_TOKEN", "")
+    wa_phone_id = _os.environ.get("WHATSAPP_PHONE_ID", "")
+    if wa_token and wa_phone_id:
+        url = f"https://graph.facebook.com/v18.0/{wa_phone_id}/messages"
+        headers = {"Authorization": f"Bearer {wa_token}", "Content-Type": "application/json"}
+        payload = {"messaging_product": "whatsapp", "to": phone, "type": "text", "text": {"body": reply}}
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post(url, json=payload, headers=headers, timeout=10)
+        except Exception as e:
+            print(f"[WhatsApp] Error enviando mensaje: {e}")
+
+    return {"status": "ok"}
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
