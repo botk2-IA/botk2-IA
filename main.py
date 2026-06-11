@@ -659,12 +659,13 @@ async def whatsapp_webhook(
     wa_token = _os.environ.get("WHATSAPP_TOKEN", "")
     wa_phone_id = _os.environ.get("WHATSAPP_PHONE_ID", "")
     if wa_token and wa_phone_id:
-        url = f"https://graph.facebook.com/v18.0/{wa_phone_id}/messages"
+        url = f"https://graph.facebook.com/v21.0/{wa_phone_id}/messages"
         headers = {"Authorization": f"Bearer {wa_token}", "Content-Type": "application/json"}
         payload = {"messaging_product": "whatsapp", "to": phone, "type": "text", "text": {"body": reply}}
         try:
             async with httpx.AsyncClient() as client:
-                await client.post(url, json=payload, headers=headers, timeout=10)
+                resp = await client.post(url, json=payload, headers=headers, timeout=10)
+                print(f"[WhatsApp] Enviando a {phone} | Status: {resp.status_code} | Body: {resp.text}")
         except Exception as e:
             print(f"[WhatsApp] Error enviando mensaje: {e}")
 
