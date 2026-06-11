@@ -1,24 +1,175 @@
 <!DOCTYPE html>
 <html lang="es">
-<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-<title>Botk2-IA</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Pacientes — Botk2-IA</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-50">
-<nav class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center">
-  <span class="font-bold text-lg">Botk2-IA</span>
-  <div class="flex gap-4 text-sm">
-    <a href="/dashboard" class="hover:text-blue-300">Dashboard</a>
-    <a href="/patients" class="hover:text-blue-300">Pacientes</a>
-    <a href="/appointments" class="hover:text-blue-300">Turnos</a>
-    <a href="/professionals" class="hover:text-blue-300">Profesionales</a>
-    <a href="/reminders" class="hover:text-blue-300">Recordatorios</a>
-    <a href="/settings" class="hover:text-blue-300">Configuración</a>
-    <a href="/logout" class="text-red-400 hover:text-red-300">Salir</a>
+<body class="bg-slate-50 min-h-screen">
+<nav class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shadow-lg">
+  <div class="flex items-center gap-3">
+    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+      <svg viewBox="0 0 100 100" class="w-5 h-5"><path d="M14,80 L28,49 L41,62 L56,17 L83,80 Z" fill="white"/><circle cx="56" cy="17" r="5" fill="#93C5FD"/></svg>
+    </div>
+    <span class="font-bold text-lg">Botk2-IA</span>
+  </div>
+  <div class="flex items-center gap-1 text-sm">
+    <a href="/dashboard" class="px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">Dashboard</a>
+    <a href="/patients" class="px-3 py-2 rounded-lg bg-slate-800 text-white font-medium">Pacientes</a>
+    <a href="/appointments" class="px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">Turnos</a>
+    <a href="/professionals" class="px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">Profesionales</a>
+    <a href="/reminders" class="px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">Recordatorios</a>
+    <a href="/settings" class="px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">Configuración</a>
+    <a href="/logout" class="px-3 py-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-slate-800 transition-colors ml-2">Salir</a>
   </div>
 </nav>
-<div class="max-w-6xl mx-auto p-6">
-  <h1 class="text-2xl font-bold text-slate-800 mb-2">{{ page_title if page_title else 'Botk2-IA' }}</h1>
-  <p class="text-slate-500">Sistema en construcción — próximamente disponible completo.</p>
+
+<div class="max-w-6xl mx-auto px-6 py-8">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold text-slate-800">Pacientes</h1>
+    <button onclick="document.getElementById('modal-new').classList.remove('hidden')"
+      class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow transition-colors">
+      + Nuevo paciente
+    </button>
+  </div>
+
+  <!-- Búsqueda -->
+  <form method="get" class="mb-6">
+    <div class="flex gap-2">
+      <input name="search" value="{{ search }}" placeholder="Buscar por nombre, teléfono o email..."
+        class="flex-1 border border-slate-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"/>
+      <button type="submit" class="bg-slate-700 hover:bg-slate-800 text-white text-sm px-4 py-2 rounded-lg transition-colors">Buscar</button>
+      {% if search %}<a href="/patients" class="px-4 py-2 text-sm text-slate-500 hover:text-slate-700 border border-slate-200 rounded-lg bg-white">✕ Limpiar</a>{% endif %}
+    </div>
+  </form>
+
+  <!-- Tabla -->
+  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+    {% if patients %}
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50 border-b border-slate-100">
+        <tr>
+          <th class="text-left px-6 py-3 font-semibold text-slate-600">Nombre</th>
+          <th class="text-left px-6 py-3 font-semibold text-slate-600">Teléfono</th>
+          <th class="text-left px-6 py-3 font-semibold text-slate-600">Obra social</th>
+          <th class="text-left px-6 py-3 font-semibold text-slate-600">Turnos</th>
+          <th class="px-6 py-3"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-50">
+        {% for p in patients %}
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="px-6 py-4">
+            <a href="/patients/{{ p.id }}" class="font-semibold text-slate-800 hover:text-blue-600">{{ p.name }}</a>
+            {% if p.email %}<p class="text-xs text-slate-400">{{ p.email }}</p>{% endif %}
+          </td>
+          <td class="px-6 py-4 text-slate-600">{{ p.phone or "—" }}</td>
+          <td class="px-6 py-4 text-slate-600">{{ p.insurance or "—" }}</td>
+          <td class="px-6 py-4">
+            <span class="bg-blue-100 text-blue-700 text-xs font-semibold px-2 py-0.5 rounded-full">{{ p.appointment_count }}</span>
+          </td>
+          <td class="px-6 py-4 text-right">
+            <div class="flex items-center justify-end gap-2">
+              <button onclick="editPatient({{ p.id }}, '{{ p.name }}', '{{ p.phone }}', '{{ p.email }}', '{{ p.dni }}', '{{ p.birth_date }}', '{{ p.notes }}')"
+                class="text-xs text-slate-500 hover:text-blue-600 px-2 py-1 rounded border border-slate-200 hover:border-blue-300 transition-colors">Editar</button>
+              <form method="post" action="/patients/{{ p.id }}/delete" onsubmit="return confirm('¿Eliminar paciente?')">
+                <button type="submit" class="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded border border-slate-200 hover:border-red-300 transition-colors">Eliminar</button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="py-16 text-center">
+      <p class="text-slate-400 mb-3">No hay pacientes registrados{% if search %} para "{{ search }}"{% endif %}.</p>
+      {% if not search %}
+      <button onclick="document.getElementById('modal-new').classList.remove('hidden')"
+        class="text-sm text-blue-600 hover:underline">Agregar primer paciente</button>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
 </div>
-</body></html>
+
+<!-- Modal nuevo paciente -->
+<div id="modal-new" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
+      <h2 class="font-bold text-slate-800">Nuevo paciente</h2>
+      <button onclick="document.getElementById('modal-new').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-xl">✕</button>
+    </div>
+    <form method="post" action="/patients/new" class="px-6 py-5 space-y-4">
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Nombre *</label>
+        <input name="name" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/></div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs font-semibold text-slate-600 block mb-1">Teléfono</label>
+          <input name="phone" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/></div>
+        <div><label class="text-xs font-semibold text-slate-600 block mb-1">Email</label>
+          <input name="email" type="email" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs font-semibold text-slate-600 block mb-1">DNI</label>
+          <input name="dni" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/></div>
+        <div><label class="text-xs font-semibold text-slate-600 block mb-1">Fecha de nacimiento</label>
+          <input name="birth_date" type="date" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/></div>
+      </div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Notas</label>
+        <textarea name="notes" rows="2" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea></div>
+      <div class="flex gap-3 pt-2">
+        <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition-colors">Guardar</button>
+        <button type="button" onclick="document.getElementById('modal-new').classList.add('hidden')"
+          class="flex-1 border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold py-2 rounded-lg transition-colors">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal editar paciente -->
+<div id="modal-edit" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+  <div class="bg-white rounded-2xl shadow-xl w-full max-w-md">
+    <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
+      <h2 class="font-bold text-slate-800">Editar paciente</h2>
+      <button onclick="document.getElementById('modal-edit').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-xl">✕</button>
+    </div>
+    <form id="form-edit" method="post" class="px-6 py-5 space-y-4">
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Nombre *</label>
+        <input id="edit-name" name="name" required class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/></div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs font-semibold text-slate-600 block mb-1">Teléfono</label>
+          <input id="edit-phone" name="phone" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/></div>
+        <div><label class="text-xs font-semibold text-slate-600 block mb-1">Email</label>
+          <input id="edit-email" name="email" type="email" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="text-xs font-semibold text-slate-600 block mb-1">DNI</label>
+          <input id="edit-dni" name="dni" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/></div>
+        <div><label class="text-xs font-semibold text-slate-600 block mb-1">Fecha de nacimiento</label>
+          <input id="edit-birth" name="birth_date" type="date" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/></div>
+      </div>
+      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Notas</label>
+        <textarea id="edit-notes" name="notes" rows="2" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea></div>
+      <div class="flex gap-3 pt-2">
+        <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition-colors">Guardar</button>
+        <button type="button" onclick="document.getElementById('modal-edit').classList.add('hidden')"
+          class="flex-1 border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold py-2 rounded-lg transition-colors">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function editPatient(id, name, phone, email, dni, birth, notes) {
+  document.getElementById('form-edit').action = '/patients/' + id + '/edit';
+  document.getElementById('edit-name').value = name;
+  document.getElementById('edit-phone').value = phone;
+  document.getElementById('edit-email').value = email;
+  document.getElementById('edit-dni').value = dni;
+  document.getElementById('edit-birth').value = birth;
+  document.getElementById('edit-notes').value = notes;
+  document.getElementById('modal-edit').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
