@@ -1,86 +1,69 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Profesionales — Botk2-IA</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-slate-50 min-h-screen">
-<nav class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shadow-lg">
-  <div class="flex items-center gap-3">
-    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-      <svg viewBox="0 0 100 100" class="w-5 h-5"><path d="M14,80 L28,49 L41,62 L56,17 L83,80 Z" fill="white"/><circle cx="56" cy="17" r="5" fill="#93C5FD"/></svg>
-    </div>
-    <span class="font-bold text-lg">Botk2-IA</span>
-  </div>
-  <div class="flex items-center gap-1 text-sm">
-    <a href="/dashboard" class="px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">Dashboard</a>
-    <a href="/patients" class="px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">Pacientes</a>
-    <a href="/appointments" class="px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">Turnos</a>
-    <a href="/professionals" class="px-3 py-2 rounded-lg bg-slate-800 text-white font-medium">Profesionales</a>
-    <a href="/reminders" class="px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">Recordatorios</a>
-    <a href="/settings" class="px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">Configuración</a>
-    <a href="/logout" class="px-3 py-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-slate-800 transition-colors ml-2">Salir</a>
-  </div>
-</nav>
+{% extends "base.html" %}
 
-<div class="max-w-4xl mx-auto px-6 py-8">
-  <div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-bold text-slate-800">Profesionales</h1>
-    <button onclick="document.getElementById('modal-new').classList.remove('hidden')"
-      class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-lg shadow transition-colors">
-      + Nuevo profesional
-    </button>
-  </div>
+{% block title %}Profesionales — Botk2-IA{% endblock %}
+{% block page_title %}Profesionales{% endblock %}
+{% block page_subtitle %}{{ professionals | selectattr('active') | list | length }} profesionales activos{% endblock %}
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-    {% for p in professionals %}
-    {% if p.active %}
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center gap-4">
-      <div class="w-12 h-12 rounded-xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0"
-           style="background-color: {{ p.color }}">
-        {{ p.name[0] | upper }}
+{% block page_actions %}
+<button onclick="document.getElementById('modal-new').classList.remove('hidden')" class="btn-primary">+ Nuevo profesional</button>
+{% endblock %}
+
+{% block content %}
+{% set active_profs = professionals | selectattr('active') | list %}
+{% if active_profs %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for p in active_profs %}
+  <div class="card">
+    <div class="flex items-start gap-3 mb-4">
+      <div class="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style="background:{{ p.color }}22">
+        <span class="font-extrabold text-lg" style="color:{{ p.color }}">{{ p.name[0] | upper }}</span>
       </div>
       <div class="flex-1 min-w-0">
-        <p class="font-semibold text-slate-800">{{ p.name }}</p>
-        <p class="text-sm text-slate-500">{{ p.specialty or "Sin especialidad" }}</p>
+        <p class="font-bold text-slate-800">{{ p.name }}</p>
+        {% if p.specialty %}
+        <span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="background:{{ p.color }}22;color:{{ p.color }}">{{ p.specialty }}</span>
+        {% else %}
+        <span class="text-xs text-slate-400">Sin especialidad</span>
+        {% endif %}
       </div>
-      <form method="post" action="/professionals/{{ p.id }}/delete" onsubmit="return confirm('¿Eliminar profesional?')">
-        <button type="submit" class="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded border border-slate-200 hover:border-red-300 transition-colors">Eliminar</button>
+      <div class="w-2 h-2 bg-green-400 rounded-full mt-2 flex-shrink-0" title="Activo"></div>
+    </div>
+    <div class="flex gap-3 mt-3">
+      <a href="/appointments" class="btn-outline flex-1 text-xs text-center">Ver agenda →</a>
+      <form method="post" action="/professionals/{{ p.id }}/delete" onsubmit="return confirm('¿Eliminar profesional?')" style="display:inline">
+        <button type="submit" class="bg-red-100 text-red-700 text-xs font-semibold px-3 py-1.5 rounded hover:bg-red-200 transition-colors border-0 cursor-pointer">Eliminar</button>
       </form>
     </div>
-    {% endif %}
-    {% else %}
-    <div class="col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 py-16 text-center">
-      <p class="text-slate-400 mb-3">No hay profesionales registrados.</p>
-      <button onclick="document.getElementById('modal-new').classList.remove('hidden')"
-        class="text-sm text-blue-600 hover:underline">Agregar profesional</button>
-    </div>
-    {% endfor %}
   </div>
+  {% endfor %}
 </div>
+{% else %}
+<div class="card text-center py-16">
+  <p class="text-slate-400 mb-3">No hay profesionales registrados.</p>
+  <button onclick="document.getElementById('modal-new').classList.remove('hidden')" class="text-sm text-blue-600 hover:underline">Agregar profesional</button>
+</div>
+{% endif %}
+{% endblock %}
 
-<!-- Modal nuevo profesional -->
-<div id="modal-new" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-  <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm">
-    <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center">
-      <h2 class="font-bold text-slate-800">Nuevo profesional</h2>
-      <button onclick="document.getElementById('modal-new').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-xl">✕</button>
+{% block modals %}
+<div id="modal-new" class="modal-overlay hidden">
+  <div class="modal-box">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+      <h3 class="font-bold text-slate-800">Nuevo profesional</h3>
+      <button onclick="document.getElementById('modal-new').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
     </div>
     <form method="post" action="/professionals/new" class="px-6 py-5 space-y-4">
-      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Nombre *</label>
-        <input name="name" required placeholder="Dr. Juan Pérez" class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/></div>
-      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Especialidad</label>
-        <input name="specialty" placeholder="Clínica general, Pediatría..." class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/></div>
-      <div><label class="text-xs font-semibold text-slate-600 block mb-1">Color</label>
+      <div><label class="form-label">Nombre *</label>
+        <input name="name" required placeholder="Dr. Juan Pérez" class="form-input"/></div>
+      <div><label class="form-label">Especialidad</label>
+        <input name="specialty" placeholder="Clínica general, Pediatría..." class="form-input"/></div>
+      <div><label class="form-label">Color</label>
         <input name="color" type="color" value="#3B82F6" class="w-12 h-10 border border-slate-200 rounded-lg cursor-pointer"/></div>
-      <div class="flex gap-3 pt-2">
-        <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition-colors">Guardar</button>
-        <button type="button" onclick="document.getElementById('modal-new').classList.add('hidden')"
-          class="flex-1 border border-slate-200 text-slate-600 hover:bg-slate-50 font-semibold py-2 rounded-lg transition-colors">Cancelar</button>
+      <div class="flex gap-3 pt-1">
+        <button type="submit" class="btn-primary flex-1">Guardar</button>
+        <button type="button" onclick="document.getElementById('modal-new').classList.add('hidden')" class="btn-outline">Cancelar</button>
       </div>
     </form>
   </div>
 </div>
-</body>
-</html>
+{% endblock %}

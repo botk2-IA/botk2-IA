@@ -1,115 +1,54 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Configuración — Botk2-IA</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-slate-50 min-h-screen">
-<nav class="bg-slate-900 text-white px-6 py-4 flex justify-between items-center shadow-lg">
-  <div class="flex items-center gap-3">
-    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-      <svg viewBox="0 0 100 100" class="w-5 h-5"><path d="M14,80 L28,49 L41,62 L56,17 L83,80 Z" fill="white"/><circle cx="56" cy="17" r="5" fill="#93C5FD"/></svg>
-    </div>
-    <span class="font-bold text-lg">Botk2-IA</span>
-  </div>
-  <div class="flex items-center gap-1 text-sm">
-    <a href="/dashboard" class="px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">Dashboard</a>
-    <a href="/patients" class="px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">Pacientes</a>
-    <a href="/appointments" class="px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">Turnos</a>
-    <a href="/professionals" class="px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">Profesionales</a>
-    <a href="/reminders" class="px-3 py-2 rounded-lg hover:bg-slate-800 text-slate-300 hover:text-white transition-colors">Recordatorios</a>
-    <a href="/settings" class="px-3 py-2 rounded-lg bg-slate-800 text-white font-medium">Configuración</a>
-    <a href="/logout" class="px-3 py-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-slate-800 transition-colors ml-2">Salir</a>
-  </div>
-</nav>
+{% extends "base.html" %}
 
-<div class="max-w-2xl mx-auto px-6 py-8">
-  <h1 class="text-2xl font-bold text-slate-800 mb-6">Configuración</h1>
+{% block title %}Configuración — Botk2-IA{% endblock %}
+{% block page_title %}Configuración{% endblock %}
+{% block page_subtitle %}Ajustes de la clínica{% endblock %}
 
-  {% if saved %}
-  <div class="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 mb-6 text-sm font-medium">
-    ✓ Cambios guardados correctamente.
-  </div>
-  {% endif %}
+{% block content %}
+{% if saved %}
+<div class="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 mb-6 text-sm font-medium">
+  ✓ Cambios guardados correctamente.
+</div>
+{% endif %}
 
+<div class="max-w-2xl space-y-6">
   <form method="post" action="/settings" class="space-y-6">
 
     <!-- Datos de la clínica -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+    <div class="card">
       <h2 class="font-bold text-slate-800 mb-4">Datos de la clínica</h2>
       <div class="space-y-4">
         <div>
-          <label class="text-xs font-semibold text-slate-600 block mb-1">Nombre *</label>
-          <input name="name" value="{{ clinic.name }}" required
-            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+          <label class="form-label">Nombre *</label>
+          <input name="name" value="{{ clinic.name }}" required class="form-input"/>
         </div>
         <div>
-          <label class="text-xs font-semibold text-slate-600 block mb-1">Teléfono</label>
-          <input name="phone" value="{{ clinic.phone or '' }}"
-            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+          <label class="form-label">Teléfono</label>
+          <input name="phone" value="{{ clinic.phone or '' }}" class="form-input"/>
         </div>
         <div>
-          <label class="text-xs font-semibold text-slate-600 block mb-1">Dirección</label>
-          <input name="address" value="{{ clinic.address or '' }}"
-            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+          <label class="form-label">Dirección</label>
+          <input name="address" value="{{ clinic.address or '' }}" class="form-input"/>
         </div>
         <div>
-          <label class="text-xs font-semibold text-slate-600 block mb-1">Número de WhatsApp</label>
-          <input name="whatsapp" value="{{ clinic.whatsapp or '' }}" placeholder="+54 11 1234-5678"
-            class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-          <p class="text-xs text-slate-400 mt-1">Número que los pacientes usarán para comunicarse por WhatsApp.</p>
+          <label class="form-label">Número de WhatsApp</label>
+          <input name="whatsapp" value="{{ clinic.whatsapp or '' }}" placeholder="+54 11 1234-5678" class="form-input"/>
+          <p class="text-xs text-slate-400 mt-1">Número que los pacientes usarán para comunicarse.</p>
         </div>
       </div>
     </div>
 
-    <!-- Plan -->
-    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-      <h2 class="font-bold text-slate-800 mb-1">Plan actual</h2>
-      <p class="text-sm text-slate-500 mb-4">
-        Estás en el plan <span class="font-semibold capitalize text-blue-600">{{ clinic.plan }}</span>.
-      </p>
-      {% if clinic.plan == 'free' %}
-      <div class="grid grid-cols-3 gap-3">
-        <a href="/subscribe/starter" class="border-2 border-slate-200 hover:border-blue-400 rounded-xl p-4 text-center transition-all">
-          <p class="font-bold text-slate-800">Starter</p>
-          <p class="text-2xl font-extrabold text-blue-600 mt-1">$29</p>
-          <p class="text-xs text-slate-500">USD/mes</p>
-          <p class="text-xs text-slate-400 mt-2">1 profesional</p>
-        </a>
-        <a href="/subscribe/pro" class="border-2 border-blue-400 bg-blue-50 rounded-xl p-4 text-center relative">
-          <span class="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">Popular</span>
-          <p class="font-bold text-slate-800">Pro</p>
-          <p class="text-2xl font-extrabold text-blue-600 mt-1">$60</p>
-          <p class="text-xs text-slate-500">USD/mes</p>
-          <p class="text-xs text-slate-400 mt-2">Hasta 3 profesionales</p>
-        </a>
-        <a href="/subscribe/clinica" class="border-2 border-slate-200 hover:border-blue-400 rounded-xl p-4 text-center transition-all">
-          <p class="font-bold text-slate-800">Clínica</p>
-          <p class="text-2xl font-extrabold text-blue-600 mt-1">$90</p>
-          <p class="text-xs text-slate-500">USD/mes</p>
-          <p class="text-xs text-slate-400 mt-2">Ilimitados</p>
-        </a>
-      </div>
-      {% else %}
-      <p class="text-sm text-slate-500">Para cambiar de plan, contactanos en <a href="mailto:soporte@botk2-ia.com" class="text-blue-600 hover:underline">soporte@botk2-ia.com</a>.</p>
-      {% endif %}
-    </div>
-
-    <button type="submit"
-      class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors shadow">
-      Guardar cambios
-    </button>
+    <button type="submit" class="btn-primary w-full py-3 text-base">Guardar cambios</button>
   </form>
 
   <!-- Estado del bot de WhatsApp -->
-  <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mt-6">
+  <div class="card">
     <h2 class="font-bold text-slate-800 mb-4">Estado del bot de WhatsApp</h2>
     <div class="space-y-4">
       <div class="flex items-center justify-between py-3 border-b border-slate-50">
         <div>
           <p class="text-sm font-semibold text-slate-700">Token de acceso</p>
-          <p class="text-xs text-slate-400 mt-0.5">Variable de entorno WHATSAPP_TOKEN en Railway</p>
+          <p class="text-xs text-slate-400 mt-0.5">Variable WHATSAPP_TOKEN en Railway</p>
         </div>
         {% if wa_token_set %}
         <span class="flex items-center gap-1.5 text-xs font-semibold bg-green-100 text-green-700 px-3 py-1 rounded-full">
@@ -124,7 +63,7 @@
       <div class="flex items-center justify-between py-3 border-b border-slate-50">
         <div>
           <p class="text-sm font-semibold text-slate-700">Phone ID</p>
-          <p class="text-xs text-slate-400 mt-0.5">Variable de entorno WHATSAPP_PHONE_ID en Railway</p>
+          <p class="text-xs text-slate-400 mt-0.5">Variable WHATSAPP_PHONE_ID en Railway</p>
         </div>
         {% if wa_phone_id %}
         <span class="text-xs font-mono bg-slate-100 text-slate-600 px-3 py-1 rounded-full">{{ wa_phone_id }}</span>
@@ -134,11 +73,11 @@
       </div>
       <div class="py-3">
         <p class="text-sm font-semibold text-slate-700 mb-1">URL del Webhook</p>
-        <p class="text-xs text-slate-400 mb-2">Configurar en Meta for Developers → WhatsApp → Configuración del webhook</p>
+        <p class="text-xs text-slate-400 mb-2">Configurar en Meta for Developers → WhatsApp → Webhook</p>
         <div class="flex items-center gap-2">
           <code class="flex-1 text-xs bg-slate-100 text-slate-700 px-3 py-2 rounded-lg font-mono truncate">{{ webhook_url }}</code>
           <button onclick="navigator.clipboard.writeText('{{ webhook_url }}'); this.textContent='✓ Copiado'; setTimeout(()=>this.textContent='Copiar',2000)"
-            class="text-xs text-blue-600 hover:text-blue-700 font-semibold border border-blue-200 hover:border-blue-300 px-3 py-2 rounded-lg transition-colors flex-shrink-0">
+            class="text-xs text-blue-600 hover:text-blue-700 font-semibold border border-blue-200 px-3 py-2 rounded-lg transition-colors flex-shrink-0">
             Copiar
           </button>
         </div>
@@ -150,6 +89,38 @@
     </div>
     {% endif %}
   </div>
+
+  <!-- Plan -->
+  <div class="card">
+    <h2 class="font-bold text-slate-800 mb-1">Plan actual</h2>
+    <p class="text-sm text-slate-500 mb-4">
+      Estás en el plan <span class="font-semibold capitalize text-blue-600">{{ clinic.plan }}</span>.
+    </p>
+    {% if clinic.plan == 'free' %}
+    <div class="grid grid-cols-3 gap-3">
+      <a href="/subscribe/starter" class="border-2 border-slate-200 hover:border-blue-400 rounded-xl p-4 text-center transition-all">
+        <p class="font-bold text-slate-800">Starter</p>
+        <p class="text-2xl font-extrabold text-blue-600 mt-1">$29</p>
+        <p class="text-xs text-slate-500">USD/mes</p>
+        <p class="text-xs text-slate-400 mt-2">1 profesional</p>
+      </a>
+      <a href="/subscribe/pro" class="border-2 border-blue-400 bg-blue-50 rounded-xl p-4 text-center relative">
+        <span class="absolute -top-2 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs px-2 py-0.5 rounded-full">Popular</span>
+        <p class="font-bold text-slate-800">Pro</p>
+        <p class="text-2xl font-extrabold text-blue-600 mt-1">$60</p>
+        <p class="text-xs text-slate-500">USD/mes</p>
+        <p class="text-xs text-slate-400 mt-2">Hasta 3 profesionales</p>
+      </a>
+      <a href="/subscribe/clinica" class="border-2 border-slate-200 hover:border-blue-400 rounded-xl p-4 text-center transition-all">
+        <p class="font-bold text-slate-800">Clínica</p>
+        <p class="text-2xl font-extrabold text-blue-600 mt-1">$90</p>
+        <p class="text-xs text-slate-500">USD/mes</p>
+        <p class="text-xs text-slate-400 mt-2">Ilimitados</p>
+      </a>
+    </div>
+    {% else %}
+    <p class="text-sm text-slate-500">Para cambiar de plan, contactanos en <a href="mailto:soporte@botk2-ia.com" class="text-blue-600 hover:underline">soporte@botk2-ia.com</a>.</p>
+    {% endif %}
+  </div>
 </div>
-</body>
-</html>
+{% endblock %}

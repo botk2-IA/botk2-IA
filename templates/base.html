@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Botk2-IA{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .nav-item{display:flex;align-items:center;gap:.75rem;padding:.6rem .75rem;border-radius:.5rem;font-size:.875rem;font-weight:500;color:#94a3b8;text-decoration:none;transition:all .15s;}
+    .nav-item:hover{background:#1e293b;color:#e2e8f0;}
+    .nav-item.active{background:#1d4ed8;color:white;}
+    .stat-card{background:white;border-radius:.75rem;border:1px solid #f1f5f9;box-shadow:0 1px 3px rgba(0,0,0,.07);padding:1.25rem;}
+    .card{background:white;border-radius:.75rem;border:1px solid #f1f5f9;box-shadow:0 1px 3px rgba(0,0,0,.07);padding:1.25rem;}
+    .badge-confirmed{display:inline-block;background:#dcfce7;color:#15803d;font-size:.7rem;font-weight:700;padding:.15rem .55rem;border-radius:9999px;}
+    .badge-pending  {display:inline-block;background:#fef9c3;color:#a16207;font-size:.7rem;font-weight:700;padding:.15rem .55rem;border-radius:9999px;}
+    .badge-cancelled{display:inline-block;background:#fee2e2;color:#b91c1c;font-size:.7rem;font-weight:700;padding:.15rem .55rem;border-radius:9999px;}
+    .badge-completed{display:inline-block;background:#f1f5f9;color:#64748b;font-size:.7rem;font-weight:700;padding:.15rem .55rem;border-radius:9999px;}
+    .btn-primary{background:#2563eb;color:white;font-size:.8rem;font-weight:600;padding:.45rem 1rem;border-radius:.5rem;cursor:pointer;border:none;transition:background .15s;}
+    .btn-primary:hover{background:#1d4ed8;}
+    .btn-outline{border:1px solid #cbd5e1;color:#475569;font-size:.8rem;font-weight:500;padding:.4rem .9rem;border-radius:.5rem;cursor:pointer;background:white;transition:all .15s;}
+    .btn-outline:hover{background:#f8fafc;border-color:#94a3b8;}
+    .form-label{display:block;font-size:.8rem;font-weight:600;color:#374151;margin-bottom:.3rem;}
+    .form-input{width:100%;border:1px solid #d1d5db;border-radius:.5rem;padding:.5rem .75rem;font-size:.875rem;outline:none;transition:box-shadow .15s;box-sizing:border-box;}
+    .form-input:focus{border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.15);}
+    .modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:999;}
+    .modal-box{background:white;border-radius:1rem;box-shadow:0 25px 60px rgba(0,0,0,.3);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;}
+  </style>
+</head>
+<body class="bg-slate-50 h-screen overflow-hidden">
+<div class="flex h-screen">
+
+{% set path = request.url.path %}
+
+<!-- ═══ SIDEBAR ═══ -->
+<aside class="w-56 bg-slate-900 flex flex-col flex-shrink-0 overflow-y-auto">
+  <div class="px-4 py-5 border-b border-slate-700">
+    <div class="flex items-center gap-2 mb-3">
+      <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+        <svg viewBox="0 0 100 100" class="w-5 h-5"><path d="M14,80 L28,49 L41,62 L56,17 L83,80 Z" fill="white"/><circle cx="56" cy="17" r="5" fill="#93C5FD"/></svg>
+      </div>
+      <span class="font-bold text-white text-sm">Botk2-IA</span>
+    </div>
+    <div class="bg-slate-800 rounded-xl p-3">
+      <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mb-2">
+        <span class="text-blue-600 font-extrabold text-lg">{{ clinic.name[0] | upper }}</span>
+      </div>
+      <p class="text-white text-xs font-semibold leading-tight">{{ clinic.name }}</p>
+      <p class="text-slate-400 text-xs mt-0.5">Plan {{ clinic.plan | capitalize }}</p>
+    </div>
+  </div>
+
+  <nav class="flex-1 py-4 px-3 space-y-1">
+    <a href="/dashboard" class="nav-item {{ 'active' if path == '/dashboard' else '' }}">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      Dashboard
+    </a>
+    <a href="/appointments" class="nav-item {{ 'active' if path.startswith('/appointments') else '' }}">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      Agenda
+    </a>
+    <a href="/patients" class="nav-item {{ 'active' if path.startswith('/patients') else '' }}">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Pacientes
+    </a>
+    <a href="/professionals" class="nav-item {{ 'active' if path.startswith('/professionals') else '' }}">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+      Profesionales
+    </a>
+    <a href="/reminders" class="nav-item {{ 'active' if path.startswith('/reminders') else '' }}">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+      Recordatorios
+    </a>
+    <a href="/settings" class="nav-item {{ 'active' if path.startswith('/settings') else '' }}">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+      Configuración
+    </a>
+  </nav>
+
+  <div class="px-4 py-4 border-t border-slate-700">
+    <div class="{{ 'bg-amber-900' if clinic.plan not in ['free','starter'] else 'bg-slate-800' }} rounded-lg px-3 py-2.5 mb-3">
+      <p class="{{ 'text-amber-300' if clinic.plan not in ['free','starter'] else 'text-slate-300' }} text-xs font-semibold">Plan {{ clinic.plan | capitalize }}</p>
+      <p class="text-slate-400 text-xs mt-0.5 truncate">{{ clinic.name }}</p>
+    </div>
+    <a href="/logout" class="nav-item" style="color:#f87171;">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+      Cerrar sesión
+    </a>
+  </div>
+</aside>
+
+<!-- ═══ MAIN ═══ -->
+<div class="flex-1 flex flex-col overflow-hidden">
+  <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+    <div>
+      <h1 class="font-bold text-slate-800 text-lg">{% block page_title %}{% endblock %}</h1>
+      <p class="text-sm text-slate-500">{% block page_subtitle %}{{ clinic.name }}{% endblock %}</p>
+    </div>
+    <div>{% block page_actions %}{% endblock %}</div>
+  </header>
+  <main class="flex-1 overflow-y-auto p-6">
+    {% block content %}{% endblock %}
+  </main>
+</div>
+
+</div>
+
+{% block modals %}{% endblock %}
+
+<div id="toast" class="fixed bottom-6 right-6 bg-slate-800 text-white text-sm px-5 py-3 rounded-xl shadow-2xl transition-all duration-300 opacity-0 pointer-events-none z-50">✅ Guardado</div>
+<script>
+function showToast(msg){const t=document.getElementById('toast');t.textContent='✅ '+msg;t.classList.remove('opacity-0');t.classList.add('opacity-100');setTimeout(()=>{t.classList.remove('opacity-100');t.classList.add('opacity-0');},2500);}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -186,19 +186,34 @@ def dashboard(
         ).count()
         week_counts.append(count)
 
+    # Para el modal de nuevo turno en dashboard
+    all_patients = db.query(models.Patient).filter_by(clinic_id=clinic.id, active=True).order_by(models.Patient.name).all()
+    all_professionals = db.query(models.Professional).filter_by(clinic_id=clinic.id, active=True).order_by(models.Professional.name).all()
+    total_professionals = len(all_professionals)
+
+    # Label de fecha para el header
+    DAYS_ES = ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"]
+    MONTHS_ES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"]
+    today_dt = date.today()
+    today_label = f"{DAYS_ES[today_dt.weekday()].capitalize()} {today_dt.day} de {MONTHS_ES[today_dt.month - 1]}, {today_dt.year}"
+
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "clinic": clinic,
         "today": today,
+        "today_label": today_label,
         "todays_appointments": todays_appointments,
         "tomorrow_appointments": tomorrow_appointments,
         "total_patients": total_patients,
         "total_today": total_today,
+        "total_professionals": total_professionals,
         "pending_today": pending_today,
         "confirmed_today": confirmed_today,
         "recent_patients": recent_patients,
         "week_dates": week_dates,
         "week_counts": week_counts,
+        "all_patients": all_patients,
+        "all_professionals": all_professionals,
     })
 
 
@@ -368,6 +383,7 @@ def appointment_create(
     duration_min: int = Form(30),
     reason: str = Form(""),
     notes: str = Form(""),
+    redirect_to: str = Form(""),
     db: Session = Depends(database.get_db),
     clinic: models.Clinic = Depends(auth_module.get_current_clinic),
 ):
@@ -384,6 +400,8 @@ def appointment_create(
     )
     db.add(appointment)
     db.commit()
+    if redirect_to and redirect_to.startswith("/"):
+        return RedirectResponse(redirect_to, status_code=302)
     return RedirectResponse(f"/appointments?date_filter={date_str}", status_code=302)
 
 
