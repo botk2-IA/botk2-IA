@@ -354,20 +354,55 @@ def appointments_list(
     if not date_filter:
         date_filter = date.today().isoformat()
 
+    base_date = date.fromisoformat(date_filter)
     query = db.query(models.Appointment).filter_by(clinic_id=clinic.id)
 
-    if date_filter:
+    # Rango de fechas según vista
+    if view == "week":
+        week_start = base_date - timedelta(days=base_date.weekday())
+        week_end   = week_start + timedelta(days=6)
+        query = query.filter(
+            models.Appointment.date >= week_start.isoformat(),
+            models.Appointment.date <= week_end.isoformat(),
+        )
+        range_label = f"{week_start.strftime('%d/%m')} – {week_end.strftime('%d/%m/%Y')}"
+    elif view == "month":
+        import calendar as _cal
+        last_day = _cal.monthrange(base_date.year, base_date.month)[1]
+        month_start = base_date.replace(day=1)
+        month_end   = base_date.replace(day=last_day)
+        query = query.filter(
+            models.Appointment.date >= month_start.isoformat(),
+            models.Appointment.date <= month_end.isoformat(),
+        )
+        MESES = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
+        range_label = f"{MESES[base_date.month]} {base_date.year}"
+    else:
         query = query.filter(models.Appointment.date == date_filter)
+        range_label = date_filter
+
     if status_filter:
         query = query.filter(models.Appointment.status == status_filter)
     if professional_filter:
         query = query.filter(models.Appointment.professional_id == int(professional_filter))
 
-    appointments = query.order_by(models.Appointment.time).all()
+    appointments = query.order_by(models.Appointment.date, models.Appointment.time).all()
 
-    # Filtro por especialidad en Python (evita join complejo)
     if specialty_filter:
         appointments = [a for a in appointments if a.professional and a.professional.specialty == specialty_filter]
+
+    # Agrupar por fecha para vistas semana/mes
+    from collections import defaultdict
+    grouped = defaultdict(list)
+    for a in appointments:
+        grouped[str(a.date)].append(a)
+    grouped_dates = sorted(grouped.keys())
+
+    DIAS_ES = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"]
+    MESES_CORTO = ["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
+    def fmt_date_label(d_str):
+        d = date.fromisoformat(d_str)
+        return f"{DIAS_ES[d.weekday()]} {d.day} {MESES_CORTO[d.month]}"
 
     patients      = db.query(models.Patient).filter_by(clinic_id=clinic.id, active=True).order_by(models.Patient.name).all()
     professionals = db.query(models.Professional).filter_by(clinic_id=clinic.id, active=True).order_by(models.Professional.name).all()
@@ -377,6 +412,9 @@ def appointments_list(
         "request": request,
         "clinic": clinic,
         "appointments": appointments,
+        "grouped": dict(grouped),
+        "grouped_dates": grouped_dates,
+        "fmt_date_label": fmt_date_label,
         "patients": patients,
         "professionals": professionals,
         "specialties": specialties,
@@ -385,6 +423,7 @@ def appointments_list(
         "professional_filter": professional_filter,
         "specialty_filter": specialty_filter,
         "view": view,
+        "range_label": range_label,
         "today": date.today().isoformat(),
     })
 
