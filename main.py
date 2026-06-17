@@ -391,18 +391,52 @@ def appointments_list(
     if specialty_filter:
         appointments = [a for a in appointments if a.professional and a.professional.specialty == specialty_filter]
 
-    # Agrupar por fecha para vistas semana/mes
+    # Agrupar por fecha (para uso en vistas)
     from collections import defaultdict
     grouped = defaultdict(list)
     for a in appointments:
         grouped[str(a.date)].append(a)
-    grouped_dates = sorted(grouped.keys())
 
-    DIAS_ES = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"]
+    DIAS_CORTO = ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"]
     MESES_CORTO = ["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
-    def fmt_date_label(d_str):
-        d = date.fromisoformat(d_str)
-        return f"{DIAS_ES[d.weekday()]} {d.day} {MESES_CORTO[d.month]}"
+
+    # Vista SEMANA: 7 columnas con los días
+    if view == "week":
+        week_days = []
+        for i in range(7):
+            d = week_start + timedelta(days=i)
+            d_str = d.isoformat()
+            week_days.append({
+                "date": d_str,
+                "label": DIAS_CORTO[d.weekday()],
+                "num": d.day,
+                "appts": grouped.get(d_str, []),
+                "is_today": d == date.today(),
+            })
+    else:
+        week_days = []
+
+    # Vista MES: grilla de calendario empezando en domingo
+    if view == "month":
+        import calendar as _cal2
+        last_day_num = _cal2.monthrange(base_date.year, base_date.month)[1]
+        first_day = base_date.replace(day=1)
+        first_offset = (first_day.weekday() + 1) % 7  # Dom=0...Sáb=6
+        all_cells = [None] * first_offset
+        for day_num in range(1, last_day_num + 1):
+            d = date(base_date.year, base_date.month, day_num)
+            d_str = d.isoformat()
+            all_cells.append({
+                "day": day_num,
+                "date": d_str,
+                "appts": grouped.get(d_str, []),
+                "is_today": d == date.today(),
+            })
+        while len(all_cells) % 7 != 0:
+            all_cells.append(None)
+        calendar_weeks = [all_cells[i:i+7] for i in range(0, len(all_cells), 7)]
+    else:
+        calendar_weeks = []
 
     patients      = db.query(models.Patient).filter_by(clinic_id=clinic.id, active=True).order_by(models.Patient.name).all()
     professionals = db.query(models.Professional).filter_by(clinic_id=clinic.id, active=True).order_by(models.Professional.name).all()
@@ -412,9 +446,8 @@ def appointments_list(
         "request": request,
         "clinic": clinic,
         "appointments": appointments,
-        "grouped": dict(grouped),
-        "grouped_dates": grouped_dates,
-        "fmt_date_label": fmt_date_label,
+        "week_days": week_days,
+        "calendar_weeks": calendar_weeks,
         "patients": patients,
         "professionals": professionals,
         "specialties": specialties,
@@ -715,6 +748,34 @@ def statistics_page(
             })
     prof_stats.sort(key=lambda x: x["pct"], reverse=True)
 
+    # Turnos por especialidad
+    from collections import Counter
+    spec_counts = Counter()
+    spec_colors = {}
+    for a in all_appts:
+        if a.professional and a.professional.specialty:
+            sp = a.professional.specialty
+            spec_counts[sp] += 1
+            spec_colors[sp] = a.professional.color
+    spec_total = sum(spec_counts.values()) or 1
+    specialty_stats = [
+        {"name": sp, "count": cnt, "pct": round(cnt * 100 / spec_total), "color": spec_colors.get(sp, "#3B82F6")}
+        for sp, cnt in spec_counts.most_common()
+    ]
+
+    # Pacientes por obra social
+    patients_all = db.query(models.Patient).filter_by(clinic_id=clinic.id, active=True).all()
+    ins_counts = Counter()
+    for p in patients_all:
+        ins = (p.insurance or "").strip() or "Particular"
+        ins_counts[ins] += 1
+    ins_total = sum(ins_counts.values()) or 1
+    INS_COLORS = ["#8B5CF6","#3B82F6","#06B6D4","#10B981","#F59E0B","#6B7280","#EF4444","#EC4899","#14B8A6","#F97316"]
+    insurance_stats = [
+        {"name": ins, "count": cnt, "pct": round(cnt * 100 / ins_total), "color": INS_COLORS[i % len(INS_COLORS)]}
+        for i, (ins, cnt) in enumerate(ins_counts.most_common())
+    ]
+
     return templates.TemplateResponse("statistics.html", {
         "request": request,
         "clinic": clinic,
@@ -727,6 +788,8 @@ def statistics_page(
         "total_patients": total_patients,
         "months_data": months_data,
         "prof_stats": prof_stats,
+        "specialty_stats": specialty_stats,
+        "insurance_stats": insurance_stats,
     })
 
 

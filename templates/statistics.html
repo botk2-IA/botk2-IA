@@ -99,6 +99,54 @@
   </div>
 </div>
 
+<!-- Turnos por especialidad + Pacientes por obra social -->
+{% if specialty_stats or insurance_stats %}
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  {% if specialty_stats %}
+  <div class="card">
+    <h2 class="font-bold text-slate-800 mb-4">Turnos por especialidad</h2>
+    <div class="space-y-3">
+      {% set max_spec = specialty_stats[0].count %}
+      {% for item in specialty_stats %}
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="background:{{ item.color }}22;color:{{ item.color }}">{{ item.name }}</span>
+          <span class="text-sm font-bold text-slate-600">{{ item.count }} <span class="text-slate-400 font-normal">({{ item.pct }}%)</span></span>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-2.5">
+          <div class="h-2.5 rounded-full" style="width:{{ (item.count * 100 // max_spec) }}%;background:{{ item.color }}"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if insurance_stats %}
+  <div class="card">
+    <h2 class="font-bold text-slate-800 mb-4">Pacientes por obra social</h2>
+    <div class="space-y-3">
+      {% set max_ins = insurance_stats[0].count %}
+      {% for item in insurance_stats %}
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <span class="flex items-center gap-1.5 text-sm text-slate-700">
+            <span class="w-2.5 h-2.5 rounded-full inline-block flex-shrink-0" style="background:{{ item.color }}"></span>
+            {{ item.name }}
+          </span>
+          <span class="text-sm font-bold text-slate-600">{{ item.count }} <span class="text-slate-400 font-normal">({{ item.pct }}%)</span></span>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-2">
+          <div class="h-2 rounded-full" style="width:{{ (item.count * 100 // max_ins) }}%;background:{{ item.color }}"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
 <!-- Rendimiento por profesional -->
 {% if prof_stats %}
 <div class="card">
