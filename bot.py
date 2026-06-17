@@ -444,7 +444,7 @@ def _mostrar_horas(db: Session, s: dict, clinic_id: int) -> str:
     msg = f"⏰ Horarios disponibles el *{_fecha_legible(s['fecha'])}*:\n\n"
     for i, hora in enumerate(horas, 1):
         s["opciones"][str(i)] = {"hora": hora}
-        msg += f"{i}️⃣ {hora} hs\n"
+        msg += f"🔵 *{i}.* {hora} hs\n"
     msg += "\nElegí el número del horario que preferís 👆"
     return msg
 
@@ -512,6 +512,6 @@ def _mostrar_turnos_paciente(phone: str, db: Session, clinic_id: int, s: dict, s
         for i, t in enumerate(turnos, 1):
             prof = t.professional.name if t.professional else "Profesional"
             s["opciones"][str(i)] = {"appt_id": t.id}
-            msg += f"{i}️⃣ {_fecha_legible(t.date)} · {t.time} hs · {prof}\n"
-        msg += "\n0️⃣ Volver sin cancelar\n\nElegí el número del turno a cancelar."
+            msg += f"🔵 *{i}.* {_fecha_legible(t.date)} · {t.time} hs · {prof}\n"
+        msg += "\n🔵 *0.* Volver sin cancelar\n\nElegí el número del turno a cancelar."
         return msg
