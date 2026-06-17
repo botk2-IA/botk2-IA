@@ -345,6 +345,8 @@ def appointments_list(
     request: Request,
     date_filter: str = "",
     status_filter: str = "",
+    professional_filter: str = "",
+    specialty_filter: str = "",
     db: Session = Depends(database.get_db),
     clinic: models.Clinic = Depends(auth_module.get_current_clinic),
 ):
@@ -357,10 +359,18 @@ def appointments_list(
         query = query.filter(models.Appointment.date == date_filter)
     if status_filter:
         query = query.filter(models.Appointment.status == status_filter)
+    if professional_filter:
+        query = query.filter(models.Appointment.professional_id == int(professional_filter))
 
     appointments = query.order_by(models.Appointment.time).all()
+
+    # Filtro por especialidad en Python (evita join complejo)
+    if specialty_filter:
+        appointments = [a for a in appointments if a.professional and a.professional.specialty == specialty_filter]
+
     patients      = db.query(models.Patient).filter_by(clinic_id=clinic.id, active=True).order_by(models.Patient.name).all()
-    professionals = db.query(models.Professional).filter_by(clinic_id=clinic.id, active=True).all()
+    professionals = db.query(models.Professional).filter_by(clinic_id=clinic.id, active=True).order_by(models.Professional.name).all()
+    specialties   = sorted(set(p.specialty for p in professionals if p.specialty))
 
     return templates.TemplateResponse("appointments.html", {
         "request": request,
@@ -368,8 +378,11 @@ def appointments_list(
         "appointments": appointments,
         "patients": patients,
         "professionals": professionals,
+        "specialties": specialties,
         "date_filter": date_filter,
         "status_filter": status_filter,
+        "professional_filter": professional_filter,
+        "specialty_filter": specialty_filter,
         "today": date.today().isoformat(),
     })
 
