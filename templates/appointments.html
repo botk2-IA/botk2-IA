@@ -5,7 +5,23 @@
 {% block page_subtitle %}Gestión de turnos{% endblock %}
 
 {% block page_actions %}
-<button onclick="document.getElementById('modal-new').classList.remove('hidden')" class="btn-primary">+ Nuevo turno</button>
+<div class="flex items-center gap-2">
+  <div class="flex border border-slate-200 rounded-lg overflow-hidden bg-white">
+    <a href="/appointments?date_filter={{ date_filter }}&status_filter={{ status_filter }}&professional_filter={{ professional_filter }}&specialty_filter={{ specialty_filter }}&view=day"
+       class="px-4 py-2 text-sm font-semibold transition-colors {% if view != 'week' and view != 'month' %}bg-blue-600 text-white{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+      📅 Día
+    </a>
+    <a href="/appointments?date_filter={{ date_filter }}&view=week"
+       class="px-4 py-2 text-sm font-semibold border-l border-slate-200 transition-colors {% if view == 'week' %}bg-blue-600 text-white{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+      Semana
+    </a>
+    <a href="/appointments?date_filter={{ date_filter }}&view=month"
+       class="px-4 py-2 text-sm font-semibold border-l border-slate-200 transition-colors {% if view == 'month' %}bg-blue-600 text-white{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
+      Mes
+    </a>
+  </div>
+  <button onclick="document.getElementById('modal-new').classList.remove('hidden')" class="btn-primary">+ Nuevo turno</button>
+</div>
 {% endblock %}
 
 {% block content %}

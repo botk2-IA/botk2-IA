@@ -347,6 +347,7 @@ def appointments_list(
     status_filter: str = "",
     professional_filter: str = "",
     specialty_filter: str = "",
+    view: str = "day",
     db: Session = Depends(database.get_db),
     clinic: models.Clinic = Depends(auth_module.get_current_clinic),
 ):
@@ -383,6 +384,7 @@ def appointments_list(
         "status_filter": status_filter,
         "professional_filter": professional_filter,
         "specialty_filter": specialty_filter,
+        "view": view,
         "today": date.today().isoformat(),
     })
 
@@ -620,6 +622,112 @@ def settings_save(
     clinic.whatsapp = whatsapp
     db.commit()
     return RedirectResponse("/settings?saved=1", status_code=302)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ESTADÍSTICAS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/statistics", response_class=HTMLResponse)
+def statistics_page(
+    request: Request,
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    from calendar import month_abbr
+    all_appts = db.query(models.Appointment).filter_by(clinic_id=clinic.id).all()
+    total = len(all_appts)
+    completed = sum(1 for a in all_appts if a.status == "completed")
+    cancelled = sum(1 for a in all_appts if a.status == "cancelled")
+    pending_confirmed = total - completed - cancelled
+    presentismo = round(completed * 100 / total) if total else 0
+    ausentismo  = round(cancelled * 100 / total) if total else 0
+    total_patients = db.query(models.Patient).filter_by(clinic_id=clinic.id, active=True).count()
+
+    # Turnos por mes (últimos 4 meses)
+    today = date.today()
+    months_data = []
+    for i in range(3, -1, -1):
+        m = (today.month - i - 1) % 12 + 1
+        y = today.year - ((today.month - i - 1) // 12)
+        def appt_month(a, m=m, y=y):
+            try:
+                d = a.date if isinstance(a.date, date) else date.fromisoformat(str(a.date))
+                return d.month == m and d.year == y
+            except Exception:
+                return False
+        cnt  = sum(1 for a in all_appts if appt_month(a))
+        comp = sum(1 for a in all_appts if appt_month(a) and a.status == "completed")
+        months_data.append({"label": month_abbr[m], "total": cnt, "completed": comp})
+
+    # Rendimiento por profesional
+    professionals = db.query(models.Professional).filter_by(clinic_id=clinic.id, active=True).all()
+    prof_stats = []
+    for p in professionals:
+        p_appts = [a for a in all_appts if a.professional_id == p.id]
+        p_total = len(p_appts)
+        p_comp  = sum(1 for a in p_appts if a.status == "completed")
+        if p_total:
+            prof_stats.append({
+                "prof": p,
+                "total": p_total,
+                "completed": p_comp,
+                "pct": round(p_comp * 100 / p_total),
+            })
+    prof_stats.sort(key=lambda x: x["pct"], reverse=True)
+
+    return templates.TemplateResponse("statistics.html", {
+        "request": request,
+        "clinic": clinic,
+        "total": total,
+        "completed": completed,
+        "cancelled": cancelled,
+        "pending_confirmed": pending_confirmed,
+        "presentismo": presentismo,
+        "ausentismo": ausentismo,
+        "total_patients": total_patients,
+        "months_data": months_data,
+        "prof_stats": prof_stats,
+    })
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# BOT WHATSAPP (panel + simulador)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@app.get("/bot", response_class=HTMLResponse)
+def bot_page(
+    request: Request,
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    import os as _os3
+    wa_token = _os3.environ.get("WHATSAPP_TOKEN", "")
+    wa_phone_id = _os3.environ.get("WHATSAPP_PHONE_ID", "")
+    # Stats del bot: turnos creados via bot (los que tienen source='bot' si existe, si no 0)
+    all_appts = db.query(models.Appointment).filter_by(clinic_id=clinic.id).all()
+    bot_appts = [a for a in all_appts if getattr(a, 'source', None) == 'bot']
+    return templates.TemplateResponse("bot.html", {
+        "request": request,
+        "clinic": clinic,
+        "bot_active": bool(wa_token and wa_phone_id),
+        "wa_phone_id": wa_phone_id,
+        "bot_appts": len(bot_appts),
+        "total_appts": len(all_appts),
+    })
+
+
+@app.post("/bot/chat")
+async def bot_chat(
+    request: Request,
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    data = await request.json()
+    message = data.get("message", "")
+    phone = f"sim_{clinic.id}_preview"
+    reply = chatbot.process_message(phone, message, db, clinic.id)
+    return JSONResponse({"reply": reply})
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

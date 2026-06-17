@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Estadísticas — Botk2-IA{% endblock %}
+{% block page_title %}Estadísticas{% endblock %}
+{% block page_subtitle %}Resumen de la clínica{% endblock %}
+
+{% block content %}
+<!-- Stat cards -->
+<div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+  <div class="stat-card text-center">
+    <p class="text-3xl font-extrabold text-slate-800">{{ total }}</p>
+    <p class="text-xs text-slate-500 mt-1 font-medium">Turnos totales</p>
+  </div>
+  <div class="stat-card text-center">
+    <p class="text-3xl font-extrabold text-blue-600">{{ completed }}</p>
+    <p class="text-xs text-slate-500 mt-1 font-medium">Completados</p>
+  </div>
+  <div class="stat-card text-center">
+    <p class="text-3xl font-extrabold text-green-600">{{ presentismo }}%</p>
+    <p class="text-xs text-slate-500 mt-1 font-medium">Presentismo</p>
+  </div>
+  <div class="stat-card text-center">
+    <p class="text-3xl font-extrabold text-red-500">{{ ausentismo }}%</p>
+    <p class="text-xs text-slate-500 mt-1 font-medium">Ausentismo</p>
+  </div>
+  <div class="stat-card text-center">
+    <p class="text-3xl font-extrabold text-purple-600">{{ total_patients }}</p>
+    <p class="text-xs text-slate-500 mt-1 font-medium">Pacientes</p>
+  </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+  <!-- Turnos por mes -->
+  <div class="card">
+    <h2 class="font-bold text-slate-800 mb-1">Turnos por mes</h2>
+    <p class="text-xs text-slate-400 mb-4">
+      <span class="inline-block w-3 h-3 rounded-sm bg-blue-600 mr-1"></span>Completados
+      <span class="inline-block w-3 h-3 rounded-sm bg-blue-200 ml-3 mr-1"></span>Total
+    </p>
+    {% set max_total = [months_data | map(attribute='total') | max, 1] | max %}
+    <div class="flex items-end gap-4 h-40">
+      {% for m in months_data %}
+      <div class="flex-1 flex flex-col items-center gap-1">
+        <div class="w-full flex flex-col justify-end" style="height:120px;position:relative;">
+          <!-- Total bar (light) -->
+          <div class="w-full rounded-t" style="background:#bfdbfe;height:{{ (m.total * 100 // max_total) }}%;min-height:{% if m.total %}4px{% else %}0{% endif %};position:absolute;bottom:0;left:0;"></div>
+          <!-- Completed bar (dark) -->
+          <div class="w-full rounded-t" style="background:#2563eb;height:{{ (m.completed * 100 // max_total) }}%;min-height:{% if m.completed %}4px{% else %}0{% endif %};position:absolute;bottom:0;left:0;"></div>
+        </div>
+        {% if m.total %}
+        <span class="text-xs font-bold text-slate-600">{{ m.total }}</span>
+        {% else %}
+        <span class="text-xs text-slate-300">0</span>
+        {% endif %}
+        <span class="text-xs text-slate-400">{{ m.label }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Presentismo y Ausentismo -->
+  <div class="card">
+    <h2 class="font-bold text-slate-800 mb-4">Presentismo y Ausentismo</h2>
+    <div class="space-y-4">
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-sm font-semibold text-slate-700">✅ Presentismo</span>
+          <span class="text-sm font-bold text-green-600">{{ completed }} turnos · {{ presentismo }}%</span>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-3">
+          <div class="bg-green-500 h-3 rounded-full transition-all" style="width:{{ presentismo }}%"></div>
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-sm font-semibold text-slate-700">⏳ Pendientes / Confirmados</span>
+          <span class="text-sm font-bold text-yellow-600">{{ pending_confirmed }} turnos · {{ 100 - presentismo - ausentismo }}%</span>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-3">
+          <div class="bg-yellow-400 h-3 rounded-full transition-all" style="width:{{ 100 - presentismo - ausentismo }}%"></div>
+        </div>
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-sm font-semibold text-slate-700">❌ Ausentismo (cancelados)</span>
+          <span class="text-sm font-bold text-red-500">{{ cancelled }} turnos · {{ ausentismo }}%</span>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-3">
+          <div class="bg-red-400 h-3 rounded-full transition-all" style="width:{{ ausentismo }}%"></div>
+        </div>
+      </div>
+      {% if presentismo < 78 %}
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 mt-2">
+        <p class="text-xs font-semibold text-amber-700">⚠️ Tasa de asistencia mejorable</p>
+        <p class="text-xs text-amber-600 mt-0.5">Promedio del sector: 78% de presentismo</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- Rendimiento por profesional -->
+{% if prof_stats %}
+<div class="card">
+  <h2 class="font-bold text-slate-800 mb-4">Rendimiento por profesional</h2>
+  <div class="space-y-4">
+    {% for item in prof_stats %}
+    <div class="flex items-center gap-4">
+      <div class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold text-white" style="background:{{ item.prof.color }}">
+        {{ loop.index }}
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 mb-1">
+          <p class="text-sm font-semibold text-slate-800">{{ item.prof.name }}</p>
+          {% if item.prof.specialty %}
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full" style="background:{{ item.prof.color }}22;color:{{ item.prof.color }}">{{ item.prof.specialty }}</span>
+          {% endif %}
+          <span class="ml-auto text-sm font-bold text-slate-600">{{ item.total }} turnos · {{ item.pct }}% asistencia</span>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-2.5">
+          <div class="h-2.5 rounded-full" style="width:{{ item.pct }}%;background:{{ item.prof.color }}"></div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% else %}
+<div class="card text-center py-10">
+  <p class="text-slate-400 text-sm">Agregá profesionales y turnos para ver estadísticas de rendimiento.</p>
+</div>
+{% endif %}
+{% endblock %}
