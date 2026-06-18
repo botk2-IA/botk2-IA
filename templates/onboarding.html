@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Configuración inicial — Botk2-IA</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-slate-900 to-blue-950 min-h-screen flex items-center justify-center py-10 px-4">
+
+<div class="w-full max-w-xl">
+
+  <!-- Logo -->
+  <div class="text-center mb-8">
+    <div class="inline-flex items-center gap-2 mb-2">
+      <div class="w-9 h-9 bg-blue-600 rounded-xl flex items-center justify-center">
+        <svg viewBox="0 0 100 100" class="w-5 h-5"><path d="M14,80 L28,49 L41,62 L56,17 L83,80 Z" fill="white"/><circle cx="56" cy="17" r="5" fill="#93C5FD"/></svg>
+      </div>
+      <span class="text-white font-bold text-xl">Botk2-IA</span>
+    </div>
+    <p class="text-slate-400 text-sm">Configuración inicial de tu cuenta</p>
+  </div>
+
+  <!-- Progress bar -->
+  <div class="flex items-center gap-2 mb-8">
+    {% for i in range(1, 5) %}
+    <div class="flex items-center gap-2 flex-1">
+      <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0
+        {% if i < step %}bg-green-500 text-white
+        {% elif i == step %}bg-blue-600 text-white ring-4 ring-blue-600/30
+        {% else %}bg-slate-700 text-slate-400{% endif %}">
+        {% if i < step %}✓{% else %}{{ i }}{% endif %}
+      </div>
+      {% if i < 4 %}
+      <div class="flex-1 h-1 rounded-full {% if i < step %}bg-green-500{% else %}bg-slate-700{% endif %}"></div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Card -->
+  <div class="bg-white rounded-2xl shadow-2xl overflow-hidden">
+
+    <!-- ═══ PASO 1: Datos de la clínica ═══ -->
+    {% if step == 1 %}
+    <div class="px-8 py-6 border-b border-slate-100">
+      <h2 class="text-xl font-bold text-slate-800">Datos de tu clínica</h2>
+      <p class="text-slate-500 text-sm mt-1">Confirmá la información básica de tu consultorio.</p>
+    </div>
+    <form method="post" action="/onboarding/step1" class="px-8 py-6 space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">Nombre de la clínica *</label>
+        <input name="name" value="{{ clinic.name }}" required
+          class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">Teléfono</label>
+        <input name="phone" value="{{ clinic.phone or '' }}" placeholder="+54 11 1234-5678"
+          class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">Dirección</label>
+        <input name="address" value="{{ clinic.address or '' }}" placeholder="Av. Corrientes 1234, CABA"
+          class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors">
+          Continuar →
+        </button>
+      </div>
+    </form>
+
+    <!-- ═══ PASO 2: Primer profesional ═══ -->
+    {% elif step == 2 %}
+    <div class="px-8 py-6 border-b border-slate-100">
+      <h2 class="text-xl font-bold text-slate-800">Agregá tu primer profesional</h2>
+      <p class="text-slate-500 text-sm mt-1">Los pacientes van a poder elegir especialidad y profesional por WhatsApp.</p>
+    </div>
+    <form method="post" action="/onboarding/step2" class="px-8 py-6 space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">Nombre completo *</label>
+        <input name="prof_name" required placeholder="Dr. Juan Pérez"
+          class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">Especialidad</label>
+        <input name="specialty" placeholder="Clínica general, Odontología, Pediatría..."
+          class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">Color identificador</label>
+        <div class="flex items-center gap-3">
+          <input name="color" type="color" value="#3B82F6"
+            class="w-12 h-12 border border-slate-200 rounded-xl cursor-pointer"/>
+          <span class="text-sm text-slate-500">Se usa para identificarlo en la agenda</span>
+        </div>
+      </div>
+      <div class="flex gap-3 pt-2">
+        <a href="/onboarding?step=1" class="px-4 py-3 border border-slate-200 text-slate-600 font-medium rounded-xl text-sm hover:bg-slate-50 transition-colors">← Volver</a>
+        <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors">
+          Continuar →
+        </button>
+      </div>
+    </form>
+    {% if professionals %}
+    <div class="px-8 pb-5">
+      <p class="text-xs text-slate-400 mb-2">Profesionales ya agregados:</p>
+      <div class="flex flex-wrap gap-2">
+        {% for p in professionals %}
+        <span class="text-xs font-semibold px-3 py-1 rounded-full" style="background:{{ p.color }}22;color:{{ p.color }}">
+          {{ p.name }}{% if p.specialty %} · {{ p.specialty }}{% endif %}
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- ═══ PASO 3: WhatsApp ═══ -->
+    {% elif step == 3 %}
+    <div class="px-8 py-6 border-b border-slate-100">
+      <h2 class="text-xl font-bold text-slate-800">Conectá tu WhatsApp</h2>
+      <p class="text-slate-500 text-sm mt-1">Necesitás una cuenta de Meta Business. Seguí estos pasos.</p>
+    </div>
+    <div class="px-8 py-5 space-y-4">
+      <!-- Instrucciones colapsables -->
+      <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-800 space-y-2">
+        <p class="font-bold">📋 Cómo obtener tus credenciales:</p>
+        <ol class="list-decimal list-inside space-y-1.5 text-blue-700">
+          <li>Entrá a <a href="https://developers.facebook.com" target="_blank" class="underline font-semibold">developers.facebook.com</a></li>
+          <li>Creá una app → tipo <strong>Business</strong></li>
+          <li>Agregá el producto <strong>WhatsApp</strong></li>
+          <li>En <em>Configuración de WhatsApp → Primeros pasos</em> encontrás el <strong>Phone ID</strong> y el <strong>Token</strong></li>
+          <li>Configurá el webhook con la URL que aparece abajo y el verificador <code class="bg-blue-100 px-1 rounded">botk2ia_webhook_secret</code></li>
+        </ol>
+      </div>
+
+      <!-- Webhook URL -->
+      <div>
+        <p class="text-xs font-semibold text-slate-500 uppercase mb-1">Tu URL de Webhook</p>
+        <div class="flex gap-2">
+          <code class="flex-1 text-xs bg-slate-100 text-slate-700 px-3 py-2.5 rounded-xl font-mono truncate">{{ webhook_url }}</code>
+          <button onclick="navigator.clipboard.writeText('{{ webhook_url }}'); this.textContent='✓ Copiado'; setTimeout(()=>this.textContent='Copiar',2000)"
+            class="text-xs text-blue-600 font-semibold border border-blue-200 px-3 py-2 rounded-xl whitespace-nowrap hover:bg-blue-50 transition-colors">Copiar</button>
+        </div>
+      </div>
+    </div>
+
+    <form method="post" action="/onboarding/step3" class="px-8 pb-6 space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">Phone ID</label>
+        <input name="wa_phone_id" value="{{ clinic.wa_phone_id or '' }}" placeholder="106932254906660"
+          class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+      </div>
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-1">Token de acceso</label>
+        <input name="wa_token" type="password" value="{{ clinic.wa_token or '' }}" placeholder="EAAxxxxxxxx..."
+          class="w-full border border-slate-200 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+        <p class="text-xs text-slate-400 mt-1">El token se guarda encriptado en tu cuenta.</p>
+      </div>
+      <div class="flex gap-3 pt-1">
+        <a href="/onboarding?step=2" class="px-4 py-3 border border-slate-200 text-slate-600 font-medium rounded-xl text-sm hover:bg-slate-50 transition-colors">← Volver</a>
+        <button type="submit" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors">
+          Guardar y continuar →
+        </button>
+      </div>
+      <div class="text-center">
+        <form method="post" action="/onboarding/skip" style="display:inline">
+          <button type="submit" class="text-sm text-slate-400 hover:text-slate-600 underline">Configurar después</button>
+        </form>
+      </div>
+    </form>
+
+    <!-- ═══ PASO 4: ¡Listo! ═══ -->
+    {% elif step == 4 %}
+    <div class="px-8 py-10 text-center">
+      <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
+        <span class="text-4xl">🎉</span>
+      </div>
+      <h2 class="text-2xl font-bold text-slate-800 mb-2">¡Todo listo, {{ clinic.name.split()[0] }}!</h2>
+      <p class="text-slate-500 mb-6">Tu cuenta está configurada. Podés empezar a usar Botk2-IA.</p>
+
+      <div class="bg-slate-50 rounded-xl p-4 text-left mb-6 space-y-2">
+        <div class="flex items-center gap-2 text-sm">
+          <span class="text-green-500">✓</span>
+          <span class="text-slate-700">Clínica: <strong>{{ clinic.name }}</strong></span>
+        </div>
+        {% if professionals %}
+        <div class="flex items-center gap-2 text-sm">
+          <span class="text-green-500">✓</span>
+          <span class="text-slate-700">{{ professionals | length }} profesional{% if professionals | length != 1 %}es{% endif %} configurado{% if professionals | length != 1 %}s{% endif %}</span>
+        </div>
+        {% endif %}
+        <div class="flex items-center gap-2 text-sm">
+          {% if clinic.wa_phone_id and clinic.wa_token %}
+          <span class="text-green-500">✓</span>
+          <span class="text-slate-700">WhatsApp conectado</span>
+          {% else %}
+          <span class="text-amber-500">⚠</span>
+          <span class="text-slate-500">WhatsApp pendiente de configurar</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <form method="post" action="/onboarding/complete">
+        <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-base transition-colors">
+          Ir al panel →
+        </button>
+      </form>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Skip link -->
+  {% if step < 4 %}
+  <div class="text-center mt-4">
+    <form method="post" action="/onboarding/skip" style="display:inline">
+      <button type="submit" class="text-slate-500 hover:text-slate-300 text-sm transition-colors">
+        Saltar configuración y entrar al panel
+      </button>
+    </form>
+  </div>
+  {% endif %}
+
+</div>
+</body>
+</html>

@@ -10,6 +10,36 @@
 {% endblock %}
 
 {% block content %}
+<!-- Setup checklist (solo visible hasta completar la configuración) -->
+{% if not setup_done %}
+<div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5 mb-6">
+  <div class="flex items-start justify-between gap-4">
+    <div class="flex-1">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-lg">🚀</span>
+        <h3 class="font-bold text-slate-800">Completá tu configuración</h3>
+        <span class="text-xs text-slate-500 ml-1">{{ setup_steps | selectattr('done') | list | length }}/{{ setup_steps | length }} completados</span>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        {% for s in setup_steps %}
+        <div class="flex items-center gap-1.5 text-sm {% if s.done %}text-green-700{% else %}text-slate-500{% endif %}">
+          {% if s.done %}
+          <span class="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white text-xs flex-shrink-0">✓</span>
+          {% else %}
+          <span class="w-5 h-5 bg-slate-200 rounded-full flex items-center justify-center text-slate-400 text-xs flex-shrink-0">○</span>
+          {% endif %}
+          <span {% if s.done %}class="line-through opacity-60"{% endif %}>{{ s.label }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    <a href="/onboarding" class="flex-shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors whitespace-nowrap">
+      Continuar →
+    </a>
+  </div>
+</div>
+{% endif %}
+
 <!-- Stats cards -->
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
   <div class="stat-card">

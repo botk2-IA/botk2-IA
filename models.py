@@ -18,9 +18,12 @@ class Clinic(Base):
     phone      = Column(String(50), default="")
     address    = Column(String(300), default="")
     whatsapp   = Column(String(50), default="")
-    plan       = Column(String(50), default="free")   # free | starter | pro | clinica
-    active     = Column(Boolean, default=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    plan             = Column(String(50), default="free")   # free | starter | pro | clinica
+    active           = Column(Boolean, default=True)
+    wa_phone_id      = Column(String(100), default="")   # WhatsApp Phone ID por clínica
+    wa_token         = Column(Text, default="")           # WhatsApp Token por clínica
+    onboarding_done  = Column(Boolean, default=False)
+    created_at       = Column(DateTime(timezone=True), server_default=func.now())
 
     patients      = relationship("Patient",      back_populates="clinic")
     professionals = relationship("Professional", back_populates="clinic")

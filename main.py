@@ -21,6 +21,23 @@ import auth as auth_module
 # ── Inicialización ────────────────────────────────────────────────────────────
 database.Base.metadata.create_all(bind=database.engine)
 
+# Migración: agregar columnas nuevas si no existen
+from sqlalchemy import text as _sql_text
+def _run_migration():
+    migrations = [
+        "ALTER TABLE clinics ADD COLUMN wa_phone_id VARCHAR(100) DEFAULT ''",
+        "ALTER TABLE clinics ADD COLUMN wa_token TEXT DEFAULT ''",
+        "ALTER TABLE clinics ADD COLUMN onboarding_done BOOLEAN DEFAULT FALSE",
+    ]
+    with database.engine.connect() as conn:
+        for sql in migrations:
+            try:
+                conn.execute(_sql_text(sql))
+                conn.commit()
+            except Exception:
+                pass
+_run_migration()
+
 app = FastAPI(title="Botk2-IA", version="1.0.0")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
@@ -87,7 +104,7 @@ def register(
     db.commit()
 
     token = auth_module.create_access_token({"sub": str(clinic.id)})
-    response = RedirectResponse("/dashboard", status_code=302)
+    response = RedirectResponse("/onboarding", status_code=302)
     response.set_cookie("access_token", token, httponly=True, max_age=60*60*24*7)
     return response
 
@@ -122,6 +139,110 @@ def logout():
     response = RedirectResponse("/", status_code=302)
     response.delete_cookie("access_token")
     return response
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# ONBOARDING
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def _get_onboarding_step(clinic, professionals):
+    """Determina en qué paso del onboarding está la clínica."""
+    if not (clinic.phone or clinic.address):
+        return 1
+    if not professionals:
+        return 2
+    if not (clinic.wa_phone_id and clinic.wa_token):
+        return 3
+    return 4
+
+
+@app.get("/onboarding", response_class=HTMLResponse)
+def onboarding_page(
+    request: Request,
+    step: int = 0,
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    if clinic.onboarding_done:
+        return RedirectResponse("/dashboard", status_code=302)
+    professionals = db.query(models.Professional).filter_by(clinic_id=clinic.id, active=True).all()
+    current_step = step if step else _get_onboarding_step(clinic, professionals)
+    webhook_url = str(request.base_url).rstrip("/") + f"/webhook/whatsapp/{clinic.id}"
+    return templates.TemplateResponse("onboarding.html", {
+        "request": request,
+        "clinic": clinic,
+        "step": current_step,
+        "professionals": professionals,
+        "webhook_url": webhook_url,
+    })
+
+
+@app.post("/onboarding/step1")
+def onboarding_step1(
+    name: str = Form(...),
+    phone: str = Form(""),
+    address: str = Form(""),
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    clinic.name = name
+    clinic.phone = phone
+    clinic.address = address
+    db.commit()
+    return RedirectResponse("/onboarding?step=2", status_code=302)
+
+
+@app.post("/onboarding/step2")
+def onboarding_step2(
+    prof_name: str = Form(...),
+    specialty: str = Form(""),
+    color: str = Form("#3B82F6"),
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    # Borrar el profesional por defecto si existe y no tiene turnos
+    default_prof = db.query(models.Professional).filter_by(
+        clinic_id=clinic.id, name=f"Dr. {clinic.name.split()[0]}"
+    ).first()
+    if default_prof and not default_prof.appointments:
+        db.delete(default_prof)
+    prof = models.Professional(clinic_id=clinic.id, name=prof_name, specialty=specialty, color=color)
+    db.add(prof)
+    db.commit()
+    return RedirectResponse("/onboarding?step=3", status_code=302)
+
+
+@app.post("/onboarding/step3")
+def onboarding_step3(
+    wa_phone_id: str = Form(""),
+    wa_token: str = Form(""),
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    clinic.wa_phone_id = wa_phone_id.strip()
+    clinic.wa_token = wa_token.strip()
+    db.commit()
+    return RedirectResponse("/onboarding?step=4", status_code=302)
+
+
+@app.post("/onboarding/complete")
+def onboarding_complete(
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    clinic.onboarding_done = True
+    db.commit()
+    return RedirectResponse("/dashboard", status_code=302)
+
+
+@app.post("/onboarding/skip")
+def onboarding_skip(
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    clinic.onboarding_done = True
+    db.commit()
+    return RedirectResponse("/dashboard", status_code=302)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -197,6 +318,15 @@ def dashboard(
     today_dt = date.today()
     today_label = f"{DAYS_ES[today_dt.weekday()].capitalize()} {today_dt.day} de {MONTHS_ES[today_dt.month - 1]}, {today_dt.year}"
 
+    # Checklist de configuración
+    setup_steps = [
+        {"label": "Cuenta creada", "done": True},
+        {"label": "Datos de la clínica", "done": bool(clinic.phone or clinic.address)},
+        {"label": "Primer profesional", "done": total_professionals > 0},
+        {"label": "WhatsApp conectado", "done": bool(clinic.wa_phone_id and clinic.wa_token)},
+    ]
+    setup_done = all(s["done"] for s in setup_steps)
+
     return templates.TemplateResponse("dashboard.html", {
         "request": request,
         "clinic": clinic,
@@ -214,6 +344,8 @@ def dashboard(
         "week_counts": week_counts,
         "all_patients": all_patients,
         "all_professionals": all_professionals,
+        "setup_steps": setup_steps,
+        "setup_done": setup_done,
     })
 
 
@@ -666,9 +798,10 @@ def settings_page(
     clinic: models.Clinic = Depends(auth_module.get_current_clinic),
 ):
     import os as _os2
-    wa_phone_id = _os2.environ.get("WHATSAPP_PHONE_ID", "")
-    wa_token = _os2.environ.get("WHATSAPP_TOKEN", "")
-    webhook_url = str(request.base_url).rstrip("/") + "/webhook"
+    webhook_url = str(request.base_url).rstrip("/") + f"/webhook/whatsapp/{clinic.id}"
+    # Credenciales: per-clinic primero, fallback a env vars
+    wa_phone_id = clinic.wa_phone_id or _os2.environ.get("WHATSAPP_PHONE_ID", "")
+    wa_token = clinic.wa_token or _os2.environ.get("WHATSAPP_TOKEN", "")
     return templates.TemplateResponse("settings.html", {
         "request": request,
         "clinic": clinic,
@@ -685,6 +818,8 @@ def settings_save(
     phone: str = Form(""),
     address: str = Form(""),
     whatsapp: str = Form(""),
+    wa_phone_id: str = Form(""),
+    wa_token: str = Form(""),
     db: Session = Depends(database.get_db),
     clinic: models.Clinic = Depends(auth_module.get_current_clinic),
 ):
@@ -692,6 +827,11 @@ def settings_save(
     clinic.phone    = phone
     clinic.address  = address
     clinic.whatsapp = whatsapp
+    if wa_phone_id.strip():
+        clinic.wa_phone_id = wa_phone_id.strip()
+    # Only update token if it's a real token (not the placeholder text)
+    if wa_token.strip() and wa_token.strip() != "configurado":
+        clinic.wa_token = wa_token.strip()
     db.commit()
     return RedirectResponse("/settings?saved=1", status_code=302)
 
@@ -907,9 +1047,9 @@ async def whatsapp_webhook(
 
     reply = chatbot.process_message(phone, body, db, clinic_id)
 
-    # Enviar respuesta via Meta API
-    wa_token = _os.environ.get("WHATSAPP_TOKEN", "")
-    wa_phone_id = _os.environ.get("WHATSAPP_PHONE_ID", "")
+    # Usar credenciales por clínica, con fallback a env vars globales
+    wa_token    = clinic_obj.wa_token    or _os.environ.get("WHATSAPP_TOKEN", "")
+    wa_phone_id = clinic_obj.wa_phone_id or _os.environ.get("WHATSAPP_PHONE_ID", "")
     if wa_token and wa_phone_id:
         url = f"https://graph.facebook.com/v21.0/{wa_phone_id}/messages"
         headers = {"Authorization": f"Bearer {wa_token}", "Content-Type": "application/json"}
