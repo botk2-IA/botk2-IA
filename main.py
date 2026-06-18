@@ -1381,11 +1381,10 @@ async def webhook_mercadopago(request: Request, db: Session = Depends(database.g
     result = pay_module.verify_mp_webhook(data)
     if result and result.get("status") == "approved":
         clinic = db.query(models.Clinic).filter_by(id=result["clinic_id"]).first()
-        if clinic:
-            # El plan lo guardamos en la preferencia external_reference
-            # Acá se puede guardar el plan en el metadata de la preferencia
-            # Por ahora confiamos en el query param enviado
+        if clinic and result.get("plan") in VALID_PLANS:
+            clinic.plan = result["plan"]
             db.commit()
+            print(f"[MP Webhook] Clínica {clinic.id} → plan {result['plan']}")
 
     return JSONResponse({"ok": True})
 
@@ -1408,3 +1407,4 @@ async def webhook_stripe(request: Request, db: Session = Depends(database.get_db
             db.commit()
 
     return JSONResponse({"ok": True})
+                                                

@@ -29,8 +29,8 @@ STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 # Precios por plan (en USD — MercadoPago los convierte a moneda local)
 PLANS = {
     "starter": {"name": "Starter",  "price_usd": 29.0,  "price_cents": 2900},
-    "pro":     {"name": "Pro",      "price_usd": 60.0,  "price_cents": 6000},
-    "clinica": {"name": "Clínica",  "price_usd": 90.0,  "price_cents": 9000},
+    "pro":     {"name": "Pro",      "price_usd": 49.0,  "price_cents": 4900},
+    "clinica": {"name": "Clínica",  "price_usd": 89.0,  "price_cents": 8900},
 }
 
 
@@ -67,7 +67,7 @@ def create_mp_preference(plan: str, clinic_id: int, clinic_email: str) -> Option
                 "pending": f"{APP_URL}/payment/success?plan={plan}&method=mercadopago&status=pending",
             },
             "auto_return":          "approved",
-            "external_reference":   str(clinic_id),
+            "external_reference":   f"{clinic_id}:{plan}",
             "notification_url":     f"{APP_URL}/webhook/mercadopago",
             "statement_descriptor": "BOTK2-IA",
         }
@@ -103,9 +103,14 @@ def verify_mp_webhook(data: dict) -> Optional[dict]:
             result = sdk.payment().get(resource_id)
             payment = result["response"]
             if payment.get("status") == "approved":
+                ref = payment.get("external_reference", "")
+                parts = ref.split(":")
+                clinic_id = int(parts[0])
+                plan = parts[1] if len(parts) > 1 else ""
                 return {
-                    "clinic_id": int(payment["external_reference"]),
-                    "status":    "approved",
+                    "clinic_id":  clinic_id,
+                    "plan":       plan,
+                    "status":     "approved",
                     "payment_id": str(resource_id),
                 }
     except Exception as e:
@@ -178,10 +183,4 @@ def verify_stripe_webhook(payload: bytes, sig_header: str) -> Optional[dict]:
             if session.get("payment_status") == "paid":
                 return {
                     "clinic_id": int(session["client_reference_id"]),
-                    "plan":      session["metadata"].get("plan"),
-                    "status":    "paid",
-                }
-    except Exception as e:
-        print(f"[Stripe] Error verificando webhook: {e}")
-
-    return None
+    

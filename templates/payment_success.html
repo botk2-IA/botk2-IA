@@ -1,61 +1,49 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>¡Pago exitoso! — Botk2-IA</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center px-4">
-<div class="w-full max-w-md text-center">
+{% extends "base.html" %}
+{% block title %}Pago exitoso — Botk2-IA{% endblock %}
+{% block page_title %}¡Pago recibido!{% endblock %}
+{% block page_subtitle %}Tu plan fue activado{% endblock %}
 
-  <!-- Ícono éxito -->
-  <div class="w-20 h-20 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-green-200">
-    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
-    </svg>
-  </div>
+{% block content %}
+<div class="max-w-lg mx-auto text-center">
 
-  <h1 class="text-3xl font-extrabold text-slate-800 mb-2">¡Pago recibido!</h1>
-  <p class="text-slate-600 mb-1">
-    Tu plan <strong class="text-green-600">{{ plan_name }}</strong> ya está activo.
-  </p>
-  {% if status == "pending" %}
-  <div class="bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm rounded-xl px-4 py-3 mb-6">
-    ⏳ El pago está en proceso. Te avisamos cuando se confirme.
-  </div>
-  {% else %}
-  <p class="text-slate-500 text-sm mb-6">Podés empezar a usar todas las funciones ahora mismo.</p>
-  {% endif %}
+  <div class="card py-10">
+    <div class="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
+      <span class="text-4xl">🎉</span>
+    </div>
 
-  <div class="bg-white rounded-2xl shadow-sm border border-green-100 p-5 mb-6 text-left">
-    <div class="flex items-center gap-3 mb-3">
-      <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-        <span class="text-blue-600 font-bold">{{ clinic.name[0]|upper }}</span>
+    {% if status == "pending" %}
+    <h2 class="text-2xl font-bold text-slate-800 mb-2">Pago en proceso</h2>
+    <p class="text-slate-500 mb-6">Tu pago está siendo procesado. Te avisaremos cuando se acredite y tu plan se active.</p>
+    {% else %}
+    <h2 class="text-2xl font-bold text-slate-800 mb-2">¡Plan {{ plan_name }} activado!</h2>
+    <p class="text-slate-500 mb-6">
+      {% if is_demo %}
+      (Modo demo — en producción el pago pasaría por MercadoPago.)
+      {% else %}
+      Tu suscripción está activa. El bot seguirá funcionando sin interrupciones.
+      {% endif %}
+    </p>
+    {% endif %}
+
+    <div class="bg-slate-50 rounded-xl p-4 text-left mb-6 space-y-2 text-sm">
+      <div class="flex justify-between">
+        <span class="text-slate-500">Plan</span>
+        <span class="font-semibold text-slate-800">{{ plan_name }}</span>
       </div>
-      <div>
-        <p class="font-semibold text-slate-800">{{ clinic.name }}</p>
-        <p class="text-xs text-slate-500">{{ clinic.email }}</p>
+      <div class="flex justify-between">
+        <span class="text-slate-500">Método</span>
+        <span class="font-semibold text-slate-800 capitalize">{{ method or "MercadoPago" }}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-slate-500">Estado</span>
+        <span class="font-semibold text-green-600">{{ "Pendiente" if status == "pending" else "Aprobado ✓" }}</span>
       </div>
     </div>
-    <div class="flex justify-between text-sm pt-3 border-t border-slate-100">
-      <span class="text-slate-500">Plan activo</span>
-      <span class="font-semibold text-green-600">{{ plan_name }}</span>
-    </div>
-    <div class="flex justify-between text-sm pt-2">
-      <span class="text-slate-500">Método de pago</span>
-      <span class="font-medium text-slate-700">{{ "MercadoPago" if method == "mercadopago" else "Stripe" }}</span>
-    </div>
-  </div>
 
-  <a href="/dashboard"
-     class="block w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition-colors mb-3">
-    Ir a mi panel →
-  </a>
-  <a href="/settings" class="text-sm text-slate-500 hover:text-slate-700 transition-colors">
-    Ver configuración de mi cuenta
-  </a>
+    <a href="/dashboard" class="btn-primary w-full py-3 text-base block text-center">
+      Ir al panel →
+    </a>
+  </div>
 
 </div>
-</body>
-</html>
+{% endblock %}
