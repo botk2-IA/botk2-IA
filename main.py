@@ -1407,4 +1407,3 @@ async def webhook_stripe(request: Request, db: Session = Depends(database.get_db
             db.commit()
 
     return JSONResponse({"ok": True})
-                                                
