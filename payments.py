@@ -1,61 +1,32 @@
 """
-Botk2-IA — Módulo de Pagos
-============================
-Maneja suscripciones con dos procesadores:
-  - MercadoPago  → Argentina y LATAM
-  - Stripe       → Internacional (tarjeta de crédito global)
-
-Configuración via variables de entorno (.env / Railway):
-  MP_ACCESS_TOKEN      → Token de MercadoPago (producción o sandbox)
-  STRIPE_SECRET_KEY    → sk_live_... o sk_test_...
-  STRIPE_WEBHOOK_SECRET → whsec_... (para verificar webhooks de Stripe)
-  APP_URL              → URL pública de la app (ej: https://app.botk2-ia.com)
+Botk2-IA - Modulo de Pagos
 """
-
 import os
-import json
-import hashlib
-import hmac
 from typing import Optional
 
-# ── Configuración ─────────────────────────────────────────────────────────────
-
 APP_URL = os.environ.get("APP_URL", "http://localhost:8000")
-
 MP_ACCESS_TOKEN     = os.environ.get("MP_ACCESS_TOKEN", "")
 STRIPE_SECRET_KEY   = os.environ.get("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", "")
 
-# Precios por plan (en USD — MercadoPago los convierte a moneda local)
 PLANS = {
     "starter": {"name": "Starter",  "price_usd": 29.0,  "price_cents": 2900},
     "pro":     {"name": "Pro",      "price_usd": 49.0,  "price_cents": 4900},
-    "clinica": {"name": "Clínica",  "price_usd": 89.0,  "price_cents": 8900},
+    "clinica": {"name": "Clinica",  "price_usd": 89.0,  "price_cents": 8900},
 }
 
 
-# ── MercadoPago ───────────────────────────────────────────────────────────────
-
 def create_mp_preference(plan: str, clinic_id: int, clinic_email: str) -> Optional[str]:
-    """
-    Crea una preferencia de pago en MercadoPago.
-    Devuelve la URL de checkout (init_point) o None si falla.
-
-    Requiere: pip install mercadopago
-    Docs: https://www.mercadopago.com.ar/developers/es/docs/checkout-pro
-    """
     if not MP_ACCESS_TOKEN:
         return None
-
     try:
         import mercadopago  # type: ignore
         sdk = mercadopago.SDK(MP_ACCESS_TOKEN)
-
         plan_info = PLANS[plan]
         preference_data = {
             "items": [{
-                "title":       f"Botk2-IA — Plan {plan_info['name']}",
-                "description": "Automatización con WhatsApp para tu clínica o negocio",
+                "title":       f"Botk2-IA - Plan {plan_info['name']}",
+                "description": "Automatizacion WhatsApp para clinicas",
                 "quantity":    1,
                 "unit_price":  plan_info["price_usd"],
                 "currency_id": "USD",
@@ -71,34 +42,24 @@ def create_mp_preference(plan: str, clinic_id: int, clinic_email: str) -> Option
             "notification_url":     f"{APP_URL}/webhook/mercadopago",
             "statement_descriptor": "BOTK2-IA",
         }
-
         result = sdk.preference().create(preference_data)
         if result["status"] == 201:
-            # Producción: init_point / Sandbox: sandbox_init_point
             return result["response"].get("init_point") or result["response"].get("sandbox_init_point")
     except Exception as e:
         print(f"[MercadoPago] Error creando preferencia: {e}")
-
     return None
 
 
 def verify_mp_webhook(data: dict) -> Optional[dict]:
-    """
-    Verifica y parsea una notificación IPN de MercadoPago.
-    Devuelve dict con clinic_id y status si es un pago aprobado.
-    """
     if not MP_ACCESS_TOKEN:
         return None
     try:
         import mercadopago  # type: ignore
         sdk = mercadopago.SDK(MP_ACCESS_TOKEN)
-
         topic = data.get("topic") or data.get("type")
         resource_id = data.get("id") or (data.get("data") or {}).get("id")
-
         if topic not in ("payment", "merchant_order"):
             return None
-
         if topic == "payment":
             result = sdk.payment().get(resource_id)
             payment = result["response"]
@@ -115,27 +76,15 @@ def verify_mp_webhook(data: dict) -> Optional[dict]:
                 }
     except Exception as e:
         print(f"[MercadoPago] Error verificando webhook: {e}")
-
     return None
 
 
-# ── Stripe ────────────────────────────────────────────────────────────────────
-
 def create_stripe_session(plan: str, clinic_id: int, clinic_email: str) -> Optional[str]:
-    """
-    Crea una sesión de Stripe Checkout.
-    Devuelve la URL de pago o None si falla.
-
-    Requiere: pip install stripe
-    Docs: https://stripe.com/docs/checkout/quickstart
-    """
     if not STRIPE_SECRET_KEY:
         return None
-
     try:
         import stripe  # type: ignore
         stripe.api_key = STRIPE_SECRET_KEY
-
         plan_info = PLANS[plan]
         session = stripe.checkout.Session.create(
             payment_method_types=["card"],
@@ -143,10 +92,10 @@ def create_stripe_session(plan: str, clinic_id: int, clinic_email: str) -> Optio
                 "price_data": {
                     "currency":     "usd",
                     "product_data": {
-                        "name":        f"Botk2-IA — Plan {plan_info['name']}",
-                        "description": "Automatización con WhatsApp para clínicas y negocios",
+                        "name":        f"Botk2-IA - Plan {plan_info['name']}",
+                        "description": "Automatizacion WhatsApp para clinicas",
                     },
-                    "unit_amount": plan_info["price_cents"],  # en centavos
+                    "unit_amount": plan_info["price_cents"],
                 },
                 "quantity": 1,
             }],
@@ -159,28 +108,25 @@ def create_stripe_session(plan: str, clinic_id: int, clinic_email: str) -> Optio
         )
         return session.url
     except Exception as e:
-        print(f"[Stripe] Error creando sesión: {e}")
-
+        print(f"[Stripe] Error creando sesion: {e}")
     return None
 
 
 def verify_stripe_webhook(payload: bytes, sig_header: str) -> Optional[dict]:
-    """
-    Verifica la firma del webhook de Stripe y extrae datos del pago.
-    Devuelve dict con clinic_id y plan si el pago fue exitoso.
-    """
     if not STRIPE_SECRET_KEY or not STRIPE_WEBHOOK_SECRET:
         return None
-
     try:
         import stripe  # type: ignore
         stripe.api_key = STRIPE_SECRET_KEY
-
         event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
-
         if event["type"] == "checkout.session.completed":
             session = event["data"]["object"]
             if session.get("payment_status") == "paid":
                 return {
                     "clinic_id": int(session["client_reference_id"]),
-    
+                    "plan":      session["metadata"].get("plan"),
+                    "status":    "paid",
+                }
+    except Exception as e:
+        print(f"[Stripe] Error verificando webhook: {e}")
+    return None
