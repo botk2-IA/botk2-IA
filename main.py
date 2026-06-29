@@ -53,6 +53,11 @@ def health_check():
     return {"status": "ok", "service": "Botk2-IA"}
 
 
+@app.get("/privacy", response_class=HTMLResponse)
+def privacy_policy(request: Request):
+    return templates.TemplateResponse("privacy.html", {"request": request})
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # LANDING & AUTH
 # ═══════════════════════════════════════════════════════════════════════════════
