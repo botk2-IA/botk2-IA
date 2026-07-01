@@ -69,7 +69,18 @@ def _reset(phone: str):
 # ── Helpers de disponibilidad ────────────────────────────────────────────────
 
 def _get_horas_disponibles(db: Session, clinic_id: int, professional_id: int, fecha: str) -> list[str]:
-    """Devuelve lista de horas disponibles para un día dado (9:00 a 18:00, cada 30min)."""
+    """Devuelve lista de horas disponibles según el horario configurado del profesional."""
+    prof = db.query(models.Professional).filter_by(id=professional_id).first()
+    if not prof:
+        return []
+
+    # Verificar que el día de la semana esté habilitado (0=Lun, 6=Dom)
+    fecha_date = date.fromisoformat(fecha)
+    dia_semana = str(fecha_date.weekday())
+    dias_habilitados = (prof.work_days or "0,1,2,3,4").split(",")
+    if dia_semana not in dias_habilitados:
+        return []
+
     # Horas ocupadas ese día
     ocupados = set(
         a.time for a in db.query(models.Appointment).filter(
@@ -79,13 +90,22 @@ def _get_horas_disponibles(db: Session, clinic_id: int, professional_id: int, fe
             models.Appointment.status.in_(["pending", "confirmed"]),
         ).all()
     )
-    # Generar grilla de 9:00 a 17:30 cada 30 minutos
+
+    # Generar grilla según horario del profesional, cada 30 minutos
+    work_start = prof.work_start or "09:00"
+    work_end   = prof.work_end   or "18:00"
+    sh, sm = map(int, work_start.split(":"))
+    eh, em = map(int, work_end.split(":"))
+    start_mins = sh * 60 + sm
+    end_mins   = eh * 60 + em
+
     horas = []
-    for h in range(9, 18):
-        for m in [0, 30]:
-            slot = f"{h:02d}:{m:02d}"
-            if slot not in ocupados:
-                horas.append(slot)
+    cur = start_mins
+    while cur < end_mins:
+        slot = f"{cur // 60:02d}:{cur % 60:02d}"
+        if slot not in ocupados:
+            horas.append(slot)
+        cur += 30
     return horas
 
 
@@ -501,17 +521,4 @@ def _mostrar_turnos_paciente(phone: str, db: Session, clinic_id: int, s: dict, s
         msg = f"📋 *Tus próximos turnos, {patient.name}:*\n\n"
         for t in turnos:
             prof = t.professional.name if t.professional else "Profesional"
-            msg += f"📅 {_fecha_legible(t.date)} · ⏰ {t.time} hs\n"
-            msg += f"   👨‍⚕️ {prof}\n\n"
-        msg += "Escribí *hola* si necesitás algo más."
-        s["state"] = "INICIO"
-        return msg
-    else:
-        s["opciones"] = {}
-        msg = f"¿Cuál turno querés cancelar?\n\n"
-        for i, t in enumerate(turnos, 1):
-            prof = t.professional.name if t.professional else "Profesional"
-            s["opciones"][str(i)] = {"appt_id": t.id}
-            msg += f"🔵 *{i}.* {_fecha_legible(t.date)} · {t.time} hs · {prof}\n"
-        msg += "\n🔵 *0.* Volver sin cancelar\n\nElegí el número del turno a cancelar."
-        return msg
+            msg +

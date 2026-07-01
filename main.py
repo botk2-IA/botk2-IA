@@ -28,6 +28,9 @@ def _run_migration():
         "ALTER TABLE clinics ADD COLUMN wa_phone_id VARCHAR(100) DEFAULT ''",
         "ALTER TABLE clinics ADD COLUMN wa_token TEXT DEFAULT ''",
         "ALTER TABLE clinics ADD COLUMN onboarding_done BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE professionals ADD COLUMN work_days VARCHAR(20) DEFAULT '0,1,2,3,4'",
+        "ALTER TABLE professionals ADD COLUMN work_start VARCHAR(10) DEFAULT '09:00'",
+        "ALTER TABLE professionals ADD COLUMN work_end VARCHAR(10) DEFAULT '18:00'",
     ]
     with database.engine.connect() as conn:
         for sql in migrations:
@@ -704,6 +707,24 @@ def professional_delete(
     prof = db.query(models.Professional).filter_by(id=prof_id, clinic_id=clinic.id).first()
     if prof:
         prof.active = False
+        db.commit()
+    return RedirectResponse("/professionals", status_code=302)
+
+
+@app.post("/professionals/{prof_id}/schedule")
+def professional_schedule(
+    prof_id: int,
+    work_days: str = Form(""),
+    work_start: str = Form("09:00"),
+    work_end: str = Form("18:00"),
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    prof = db.query(models.Professional).filter_by(id=prof_id, clinic_id=clinic.id).first()
+    if prof:
+        prof.work_days  = work_days
+        prof.work_start = work_start
+        prof.work_end   = work_end
         db.commit()
     return RedirectResponse("/professionals", status_code=302)
 
@@ -1397,18 +1418,4 @@ async def webhook_mercadopago(request: Request, db: Session = Depends(database.g
 @app.post("/webhook/stripe")
 async def webhook_stripe(request: Request, db: Session = Depends(database.get_db)):
     """
-    Recibe eventos de Stripe y actualiza el plan de la clínica.
-    Configurar en el dashboard de Stripe → Developers → Webhooks.
-    Evento requerido: checkout.session.completed
-    """
-    payload    = await request.body()
-    sig_header = request.headers.get("stripe-signature", "")
-
-    result = pay_module.verify_stripe_webhook(payload, sig_header)
-    if result and result.get("status") == "paid":
-        clinic = db.query(models.Clinic).filter_by(id=result["clinic_id"]).first()
-        if clinic and result.get("plan") in VALID_PLANS:
-            clinic.plan = result["plan"]
-            db.commit()
-
-    return JSONResponse({"ok": True})
+    Recibe eventos de Stripe y actualiza el 

@@ -52,12 +52,15 @@ class Patient(Base):
 class Professional(Base):
     __tablename__ = "professionals"
 
-    id        = Column(Integer, primary_key=True, index=True)
-    clinic_id = Column(Integer, ForeignKey("clinics.id"), nullable=False)
-    name      = Column(String(200), nullable=False)
-    specialty = Column(String(100), default="")
-    color     = Column(String(20), default="#3B82F6")
-    active    = Column(Boolean, default=True)
+    id         = Column(Integer, primary_key=True, index=True)
+    clinic_id  = Column(Integer, ForeignKey("clinics.id"), nullable=False)
+    name       = Column(String(200), nullable=False)
+    specialty  = Column(String(100), default="")
+    color      = Column(String(20), default="#3B82F6")
+    active     = Column(Boolean, default=True)
+    work_days  = Column(String(20), default="0,1,2,3,4")   # 0=Lun..6=Dom
+    work_start = Column(String(10), default="09:00")
+    work_end   = Column(String(10), default="18:00")
 
     clinic       = relationship("Clinic",      back_populates="professionals")
     appointments = relationship("Appointment", back_populates="professional")
@@ -83,6 +86,4 @@ class Appointment(Base):
     receta          = Column(Text, default="")
     created_at      = Column(DateTime(timezone=True), server_default=func.now())
 
-    clinic       = relationship("Clinic",       back_populates="appointments")
-    patient      = relationship("Patient",      back_populates="appointments")
-    professional = relationship("Professional", back_populates="appointments")
+    clinic       = relationship("Clinic",       bac
