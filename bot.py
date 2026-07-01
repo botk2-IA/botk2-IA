@@ -521,4 +521,17 @@ def _mostrar_turnos_paciente(phone: str, db: Session, clinic_id: int, s: dict, s
         msg = f"📋 *Tus próximos turnos, {patient.name}:*\n\n"
         for t in turnos:
             prof = t.professional.name if t.professional else "Profesional"
-            msg +
+            msg += f"📅 {_fecha_legible(t.date)} · ⏰ {t.time} hs\n"
+            msg += f"   👨‍⚕️ {prof}\n\n"
+        msg += "Escribí *hola* si necesitás algo más."
+        s["state"] = "INICIO"
+        return msg
+    else:
+        s["opciones"] = {}
+        msg = f"¿Cuál turno querés cancelar?\n\n"
+        for i, t in enumerate(turnos, 1):
+            prof = t.professional.name if t.professional else "Profesional"
+            s["opciones"][str(i)] = {"appt_id": t.id}
+            msg += f"🔵 *{i}.* {_fecha_legible(t.date)} · {t.time} hs · {prof}\n"
+        msg += "\n🔵 *0.* Volver sin cancelar\n\nElegí el número del turno a cancelar."
+        return msg
