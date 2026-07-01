@@ -1418,4 +1418,18 @@ async def webhook_mercadopago(request: Request, db: Session = Depends(database.g
 @app.post("/webhook/stripe")
 async def webhook_stripe(request: Request, db: Session = Depends(database.get_db)):
     """
-    Recibe eventos de Stripe y actualiza el 
+    Recibe eventos de Stripe y actualiza el plan de la clínica.
+    Configurar en el dashboard de Stripe → Developers → Webhooks.
+    Evento requerido: checkout.session.completed
+    """
+    payload    = await request.body()
+    sig_header = request.headers.get("stripe-signature", "")
+
+    result = pay_module.verify_stripe_webhook(payload, sig_header)
+    if result and result.get("status") == "paid":
+        clinic = db.query(models.Clinic).filter_by(id=result["clinic_id"]).first()
+        if clinic and result.get("plan") in VALID_PLANS:
+            clinic.plan = result["plan"]
+            db.commit()
+
+    return JSONResponse({"ok": True})
