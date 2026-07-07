@@ -86,4 +86,6 @@ class Appointment(Base):
     receta          = Column(Text, default="")
     created_at      = Column(DateTime(timezone=True), server_default=func.now())
 
-    clinic       = relationship("Clinic",       bac
+    clinic       = relationship("Clinic",       back_populates="appointments")
+    patient      = relationship("Patient",      back_populates="appointments")
+    professional = relationship("Professional", back_populates="appointments")
