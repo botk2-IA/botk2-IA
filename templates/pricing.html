@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Planes — Botk2-IA{% endblock %}
+{% block page_title %}Elegí tu plan{% endblock %}
+{% block page_subtitle %}Cambiá o mejorá tu plan en cualquier momento{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+
+  <!-- Plan actual -->
+  <div class="card mb-6 flex items-center gap-3">
+    <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+      <span class="text-blue-600 text-lg">⭐</span>
+    </div>
+    <div>
+      <p class="text-sm text-slate-500">Plan actual</p>
+      <p class="font-bold text-slate-800 capitalize">{{ clinic.plan or "Free" }}</p>
+    </div>
+  </div>
+
+  <!-- Grilla de planes -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+
+    <!-- Starter -->
+    <div class="card border-2 {% if clinic.plan == 'starter' %}border-blue-500{% else %}border-transparent{% endif %} relative">
+      {% if clinic.plan == 'starter' %}
+      <span class="absolute -top-3 left-4 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">Plan actual</span>
+      {% endif %}
+      <p class="text-xs font-bold text-blue-600 uppercase tracking-wide mb-1">Starter</p>
+      <p class="text-3xl font-extrabold text-slate-800 mb-1">$29<span class="text-base font-normal text-slate-400">/mes</span></p>
+      <p class="text-xs text-slate-500 mb-4">Ideal para consultorios individuales</p>
+      <ul class="text-sm text-slate-600 space-y-2 mb-6">
+        <li>✅ 1 profesional</li>
+        <li>✅ Hasta 100 turnos/mes</li>
+        <li>✅ Bot WhatsApp activo</li>
+        <li>✅ Recordatorios automáticos</li>
+        <li>❌ Estadísticas avanzadas</li>
+      </ul>
+      {% if clinic.plan != 'starter' %}
+      <a href="/subscribe/starter" class="btn-primary block text-center text-sm">Suscribirme</a>
+      {% else %}
+      <button disabled class="w-full py-2 rounded-lg bg-slate-100 text-slate-400 text-sm font-semibold cursor-not-allowed">Plan activo</button>
+      {% endif %}
+    </div>
+
+    <!-- Pro (destacado) -->
+    <div class="card border-2 {% if clinic.plan == 'pro' %}border-blue-500{% else %}border-blue-400{% endif %} relative shadow-lg">
+      <span class="absolute -top-3 left-4 {% if clinic.plan == 'pro' %}bg-blue-500{% else %}bg-blue-400{% endif %} text-white text-xs font-bold px-3 py-1 rounded-full">
+        {% if clinic.plan == 'pro' %}Plan actual{% else %}Más popular{% endif %}
+      </span>
+      <p class="text-xs font-bold text-blue-600 uppercase tracking-wide mb-1">Pro</p>
+      <p class="text-3xl font-extrabold text-slate-800 mb-1">$49<span class="text-base font-normal text-slate-400">/mes</span></p>
+      <p class="text-xs text-slate-500 mb-4">Para clínicas en crecimiento</p>
+      <ul class="text-sm text-slate-600 space-y-2 mb-6">
+        <li>✅ Hasta 5 profesionales</li>
+        <li>✅ Turnos ilimitados</li>
+        <li>✅ Bot WhatsApp activo</li>
+        <li>✅ Recordatorios automáticos</li>
+        <li>✅ Estadísticas avanzadas</li>
+      </ul>
+      {% if clinic.plan != 'pro' %}
+      <a href="/subscribe/pro" class="btn-primary block text-center text-sm">Suscribirme</a>
+      {% else %}
+      <button disabled class="w-full py-2 rounded-lg bg-slate-100 text-slate-400 text-sm font-semibold cursor-not-allowed">Plan activo</button>
+      {% endif %}
+    </div>
+
+    <!-- Clínica -->
+    <div class="card border-2 {% if clinic.plan == 'clinica' %}border-blue-500{% else %}border-transparent{% endif %} relative">
+      {% if clinic.plan == 'clinica' %}
+      <span class="absolute -top-3 left-4 bg-blue-500 text-white text-xs font-bold px-3 py-1 rounded-full">Plan actual</span>
+      {% endif %}
+      <p class="text-xs font-bold text-blue-600 uppercase tracking-wide mb-1">Clínica</p>
+      <p class="text-3xl font-extrabold text-slate-800 mb-1">$89<span class="text-base font-normal text-slate-400">/mes</span></p>
+      <p class="text-xs text-slate-500 mb-4">Para clínicas grandes</p>
+      <ul class="text-sm text-slate-600 space-y-2 mb-6">
+        <li>✅ Profesionales ilimitados</li>
+        <li>✅ Turnos ilimitados</li>
+        <li>✅ Bot WhatsApp activo</li>
+        <li>✅ Recordatorios automáticos</li>
+        <li>✅ Estadísticas avanzadas</li>
+        <li>✅ Soporte prioritario</li>
+      </ul>
+      {% if clinic.plan != 'clinica' %}
+      <a href="/subscribe/clinica" class="btn-primary block text-center text-sm">Suscribirme</a>
+      {% else %}
+      <button disabled class="w-full py-2 rounded-lg bg-slate-100 text-slate-400 text-sm font-semibold cursor-not-allowed">Plan activo</button>
+      {% endif %}
+    </div>
+
+  </div>
+
+  <p class="text-center text-xs text-slate-400 mt-6">Los pagos se procesan de forma segura a través de MercadoPago.</p>
+</div>
+{% endblock %}

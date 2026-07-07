@@ -1328,6 +1328,20 @@ import payments as pay_module
 VALID_PLANS = {"starter", "pro", "clinica"}
 
 
+@app.get("/pricing", response_class=HTMLResponse)
+def pricing_page(
+    request: Request,
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    """Página de planes y precios."""
+    return templates.TemplateResponse("pricing.html", {
+        "request": request,
+        "clinic":  clinic,
+        "plans":   pay_module.PLANS,
+    })
+
+
 @app.get("/subscribe/{plan}", response_class=HTMLResponse)
 def subscribe_page(
     plan: str,
