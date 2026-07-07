@@ -5,6 +5,7 @@ Correr con:  uvicorn main:app --reload --port 8000
 Panel:       http://localhost:8000
 """
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, Request, Form, status
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -17,6 +18,8 @@ from typing import Optional
 import models
 import database
 import auth as auth_module
+import reminders as reminders_module
+from apscheduler.schedulers.background import BackgroundScheduler
 
 # ── Inicialización ────────────────────────────────────────────────────────────
 database.Base.metadata.create_all(bind=database.engine)
@@ -42,7 +45,18 @@ def _run_migration():
                 print(f"[Migration] skipped: {e}")
 _run_migration()
 
-app = FastAPI(title="Botk2-IA", version="1.0.0")
+_scheduler = BackgroundScheduler(timezone="America/Argentina/Buenos_Aires")
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    # Recordatorio diario a las 9:00 AM hora Argentina
+    _scheduler.add_job(reminders_module.send_reminders, "cron", hour=9, minute=0, id="daily_reminders")
+    _scheduler.start()
+    print("[Scheduler] Recordatorios automáticos activos (9:00 AM diario)")
+    yield
+    _scheduler.shutdown(wait=False)
+
+app = FastAPI(title="Botk2-IA", version="1.0.0", lifespan=_lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -771,23 +785,49 @@ def reminders_page(
     })
 
 
+@app.post("/reminders/send-all")
+def send_all_reminders(
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    """Envía todos los recordatorios pendientes para mañana."""
+    sent = reminders_module.send_reminders()
+    return RedirectResponse(f"/reminders?sent={sent}", status_code=302)
+
+
 @app.post("/reminders/{appt_id}/send")
 def send_reminder(
     appt_id: int,
     db: Session = Depends(database.get_db),
     clinic: models.Clinic = Depends(auth_module.get_current_clinic),
 ):
-    """
-    Aquí iría la integración real con WhatsApp Business API / Twilio.
-    Por ahora marcamos como enviado (simulación).
-    """
+    """Envía recordatorio individual por WhatsApp."""
+    import os as _osr
+    import httpx as _httpx
     appt = db.query(models.Appointment).filter_by(id=appt_id, clinic_id=clinic.id).first()
-    if appt:
+    if appt and appt.patient and appt.patient.phone:
+        wa_token    = clinic.wa_token    or _osr.environ.get("WHATSAPP_TOKEN", "")
+        wa_phone_id = clinic.wa_phone_id or _osr.environ.get("WHATSAPP_PHONE_ID", "")
+        if wa_token and wa_phone_id:
+            prof_name = appt.professional.name if appt.professional else "el profesional"
+            msg = (
+                f"👋 Hola {appt.patient.name}, te recordamos tu turno en *{clinic.name}*:\n\n"
+                f"📅 Mañana, {appt.date}\n"
+                f"⏰ {appt.time} hs\n"
+                f"👨‍⚕️ {prof_name}\n\n"
+                f"Si necesitás cancelar o reprogramar, respondé este mensaje."
+            )
+            phone = reminders_module._normalizar_phone(appt.patient.phone)
+            try:
+                _httpx.post(
+                    f"https://graph.facebook.com/v21.0/{wa_phone_id}/messages",
+                    headers={"Authorization": f"Bearer {wa_token}", "Content-Type": "application/json"},
+                    json={"messaging_product": "whatsapp", "to": phone, "type": "text", "text": {"body": msg}},
+                    timeout=10,
+                )
+            except Exception:
+                pass
         appt.reminder_sent = True
         db.commit()
-        # TODO: Integrar con Twilio / WhatsApp Business API
-        # message = f"Hola {appt.patient.name}! Le recordamos su turno el {appt.date} a las {appt.time}. — {clinic.name}"
-        # twilio_client.messages.create(to=f"whatsapp:+54{appt.patient.phone}", body=message, ...)
     return RedirectResponse("/reminders", status_code=302)
 
 
