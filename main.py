@@ -21,24 +21,25 @@ import auth as auth_module
 # ── Inicialización ────────────────────────────────────────────────────────────
 database.Base.metadata.create_all(bind=database.engine)
 
-# Migración: agregar columnas nuevas si no existen
+# Migración: agregar columnas nuevas si no existen (IF NOT EXISTS evita errores en PostgreSQL)
 from sqlalchemy import text as _sql_text
 def _run_migration():
     migrations = [
-        "ALTER TABLE clinics ADD COLUMN wa_phone_id VARCHAR(100) DEFAULT ''",
-        "ALTER TABLE clinics ADD COLUMN wa_token TEXT DEFAULT ''",
-        "ALTER TABLE clinics ADD COLUMN onboarding_done BOOLEAN DEFAULT FALSE",
-        "ALTER TABLE professionals ADD COLUMN work_days VARCHAR(20) DEFAULT '0,1,2,3,4'",
-        "ALTER TABLE professionals ADD COLUMN work_start VARCHAR(10) DEFAULT '09:00'",
-        "ALTER TABLE professionals ADD COLUMN work_end VARCHAR(10) DEFAULT '18:00'",
+        "ALTER TABLE clinics ADD COLUMN IF NOT EXISTS wa_phone_id VARCHAR(100) DEFAULT ''",
+        "ALTER TABLE clinics ADD COLUMN IF NOT EXISTS wa_token TEXT DEFAULT ''",
+        "ALTER TABLE clinics ADD COLUMN IF NOT EXISTS onboarding_done BOOLEAN DEFAULT FALSE",
+        "ALTER TABLE professionals ADD COLUMN IF NOT EXISTS work_days VARCHAR(20) DEFAULT '0,1,2,3,4'",
+        "ALTER TABLE professionals ADD COLUMN IF NOT EXISTS work_start VARCHAR(10) DEFAULT '09:00'",
+        "ALTER TABLE professionals ADD COLUMN IF NOT EXISTS work_end VARCHAR(10) DEFAULT '18:00'",
     ]
     with database.engine.connect() as conn:
         for sql in migrations:
             try:
                 conn.execute(_sql_text(sql))
                 conn.commit()
-            except Exception:
-                pass
+            except Exception as e:
+                conn.rollback()
+                print(f"[Migration] skipped: {e}")
 _run_migration()
 
 app = FastAPI(title="Botk2-IA", version="1.0.0")
