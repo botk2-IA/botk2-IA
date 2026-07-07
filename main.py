@@ -629,6 +629,9 @@ def appointment_create(
     db: Session = Depends(database.get_db),
     clinic: models.Clinic = Depends(auth_module.get_current_clinic),
 ):
+    if not _check_appointment_limit(clinic, db):
+        return RedirectResponse("/pricing?limit=appointments", status_code=302)
+
     appointment = models.Appointment(
         clinic_id=clinic.id,
         patient_id=patient_id,
@@ -702,6 +705,9 @@ def professional_create(
     db: Session = Depends(database.get_db),
     clinic: models.Clinic = Depends(auth_module.get_current_clinic),
 ):
+    if not _check_professional_limit(clinic, db):
+        return RedirectResponse("/pricing?limit=professionals", status_code=302)
+
     prof = models.Professional(
         clinic_id=clinic.id,
         name=name,
@@ -1326,6 +1332,50 @@ def admin_login_as(
 import payments as pay_module
 
 VALID_PLANS = {"starter", "pro", "clinica"}
+
+# Límites por plan (None = ilimitado)
+PLAN_LIMITS = {
+    "free":    {"professionals": 1, "monthly_appointments": 30},
+    "starter": {"professionals": 1, "monthly_appointments": 100},
+    "pro":     {"professionals": 5, "monthly_appointments": None},
+    "clinica": {"professionals": None, "monthly_appointments": None},
+}
+
+def _check_professional_limit(clinic, db) -> bool:
+    plan = clinic.plan or "free"
+    limit = PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])["professionals"]
+    if limit is None:
+        return True
+    count = db.query(models.Professional).filter_by(clinic_id=clinic.id, active=True).count()
+    return count < limit
+
+def _check_appointment_limit(clinic, db) -> bool:
+    plan = clinic.plan or "free"
+    limit = PLAN_LIMITS.get(plan, PLAN_LIMITS["free"])["monthly_appointments"]
+    if limit is None:
+        return True
+    from datetime import date as _date
+    today = _date.today()
+    month_start = today.replace(day=1).isoformat()
+    count = db.query(models.Appointment).filter(
+        models.Appointment.clinic_id == clinic.id,
+        models.Appointment.date >= month_start,
+        models.Appointment.status != "cancelled",
+    ).count()
+    return count < limit
+
+
+@app.get("/pricing", response_class=HTMLResponse)
+def pricing_page(
+    request: Request,
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    return templates.TemplateResponse("pricing.html", {
+        "request": request,
+        "clinic":  clinic,
+        "plans":   pay_module.PLANS,
+    })
 
 
 @app.get("/pricing", response_class=HTMLResponse)
