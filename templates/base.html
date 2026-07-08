@@ -103,9 +103,19 @@
     </a>
   </nav>
 
-  <div class="px-4 py-4 border-t border-slate-700">
-    <div class="{{ 'bg-amber-900' if clinic.plan not in ['free','starter'] else 'bg-slate-800' }} rounded-lg px-3 py-2.5 mb-3">
-      <p class="{{ 'text-amber-300' if clinic.plan not in ['free','starter'] else 'text-slate-300' }} text-xs font-semibold">Plan {{ clinic.plan | capitalize }}</p>
+  <div class="px-3 py-2 border-t border-slate-700">
+    <a href="https://botk2ia.com" target="_blank" class="nav-item text-slate-400 hover:text-white">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+      Ver sitio web
+    </a>
+    <a href="/pricing" class="nav-item {{ 'active' if path == '/pricing' else '' }}">
+      <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"/></svg>
+      {% if clinic.plan in ['free', 'starter'] %}Mejorar plan{% else %}Mi plan{% endif %}
+    </a>
+  </div>
+  <div class="px-4 pb-4">
+    <div class="bg-slate-800 rounded-lg px-3 py-2 mb-2">
+      <p class="text-slate-300 text-xs font-semibold">Plan {{ clinic.plan | capitalize }}</p>
       <p class="text-slate-400 text-xs mt-0.5 truncate">{{ clinic.name }}</p>
     </div>
     <a href="/logout" class="nav-item" style="color:#f87171;">
