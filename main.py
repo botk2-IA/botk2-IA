@@ -87,6 +87,11 @@ def landing(request: Request, db: Session = Depends(database.get_db)):
         return RedirectResponse("/dashboard", status_code=302)
     return templates.TemplateResponse("landing.html", {"request": request})
 
+@app.get("/home", response_class=HTMLResponse)
+def landing_public(request: Request):
+    """Landing page pública — siempre muestra la landing aunque esté logueado."""
+    return templates.TemplateResponse("landing.html", {"request": request})
+
 
 @app.get("/register", response_class=HTMLResponse)
 def register_page(request: Request):
