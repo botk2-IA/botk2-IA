@@ -180,6 +180,14 @@ def process_message(phone: str, text: str, db: Session, clinic_id: int) -> str:
         s = _get_session(phone)
         s["clinic_id"] = clinic_id
 
+    # Atajo directo: "cancelar" va directamente a la lista de turnos
+    if text_lower in ["cancelar", "quiero cancelar", "cancelar turno"] and s["state"] not in ["CANCELAR_LISTA", "CANCELAR_CONFIRMAR"]:
+        _reset(phone)
+        s = _get_session(phone)
+        s["clinic_id"] = clinic_id
+        s["state"] = "CANCELAR_LISTA"
+        return _mostrar_turnos_paciente(phone, db, clinic_id, s)
+
     # ── ESTADO: INICIO ────────────────────────────────────────────────────────
     if s["state"] == "INICIO":
         s["state"] = "MENU"
@@ -383,16 +391,39 @@ def process_message(phone: str, text: str, db: Session, clinic_id: int) -> str:
 
         appt = db.query(models.Appointment).filter_by(id=opcion["appt_id"]).first()
         if appt:
-            appt.status = "cancelled"
-            db.commit()
             fecha_leg = _fecha_legible(appt.date)
-            _reset(phone)
+            prof_name = appt.professional.name if appt.professional else "el profesional"
+            s["state"] = "CANCELAR_CONFIRMAR"
+            s["cancelar_appt_id"] = appt.id
             return (
-                f"✅ Turno cancelado correctamente.\n\n"
-                f"📅 {fecha_leg} · ⏰ {appt.time} hs\n\n"
-                f"Si querés sacar un nuevo turno, escribí *hola* cuando quieras."
+                f"⚠️ ¿Confirmás que querés cancelar este turno?\n\n"
+                f"📅 {fecha_leg}\n"
+                f"⏰ {appt.time} hs\n"
+                f"👨‍⚕️ {prof_name}\n\n"
+                f"Respondé *SI* para cancelar ✅\n"
+                f"Respondé *NO* para volver ❌"
             )
         return "No encontré ese turno. Escribí *hola* para empezar de nuevo."
+
+    # ── ESTADO: CONFIRMAR CANCELACIÓN ─────────────────────────────────────────
+    if s["state"] == "CANCELAR_CONFIRMAR":
+        if text_lower in ["si", "sí", "yes", "confirmar", "confirmo"]:
+            appt = db.query(models.Appointment).filter_by(id=s.get("cancelar_appt_id")).first()
+            if appt:
+                appt.status = "cancelled"
+                db.commit()
+                fecha_leg = _fecha_legible(appt.date)
+                _reset(phone)
+                return (
+                    f"✅ Turno cancelado correctamente.\n\n"
+                    f"📅 {fecha_leg} · ⏰ {appt.time} hs\n\n"
+                    f"Si querés sacar un nuevo turno, escribí *hola* cuando quieras."
+                )
+            _reset(phone)
+            return "No encontré el turno. Escribí *hola* para empezar de nuevo."
+        else:
+            s["state"] = "CANCELAR_LISTA"
+            return _mostrar_turnos_paciente(phone, db, clinic_id, s)
 
     # Fallback
     _reset(phone)
