@@ -20,6 +20,8 @@
       Mes
     </a>
   </div>
+  <a href="/appointments/export?date_from={{ date_filter }}&date_to={{ date_filter }}&status_filter={{ status_filter }}&professional_filter={{ professional_filter }}"
+     class="btn-outline text-sm px-3 py-2">⬇ CSV</a>
   <button onclick="document.getElementById('modal-new').classList.remove('hidden')" class="btn-primary">+ Nuevo turno</button>
 </div>
 {% endblock %}
@@ -150,9 +152,13 @@
         </div>
       </td>
       <td class="px-4 py-3 text-right">
-        <form method="post" action="/appointments/{{ appt.id }}/delete" onsubmit="return confirm('¿Eliminar turno?')" style="display:inline">
-          <button type="submit" class="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded border border-slate-200 hover:border-red-300 transition-colors">Eliminar</button>
-        </form>
+        <div class="flex gap-1 justify-end">
+          <button onclick="openNote({{ appt.id }}, `{{ appt.notes | replace('`','\\`') }}`)"
+                  title="Nota interna" class="text-xs px-2 py-1 rounded border border-slate-200 hover:bg-amber-50 hover:border-amber-300 transition-colors {% if appt.notes %}text-amber-600{% else %}text-slate-400{% endif %}">📝</button>
+          <form method="post" action="/appointments/{{ appt.id }}/delete" onsubmit="return confirm('¿Eliminar turno?')" style="display:inline">
+            <button type="submit" class="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded border border-slate-200 hover:border-red-300 transition-colors">Eliminar</button>
+          </form>
+        </div>
       </td>
     </tr>
     {% endfor %}
@@ -366,5 +372,36 @@ document.addEventListener('click', function(e) {
     if (dd) dd.style.display = 'none';
   }
 });
+
+let _noteApptId = null;
+function openNote(id, text) {
+  _noteApptId = id;
+  document.getElementById('note-textarea').value = text;
+  document.getElementById('modal-note').classList.remove('hidden');
+  setTimeout(() => document.getElementById('note-textarea').focus(), 50);
+}
+function saveNote() {
+  if (!_noteApptId) return;
+  fetch(`/appointments/${_noteApptId}/note`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({notes: document.getElementById('note-textarea').value})
+  }).then(() => location.reload());
+}
 </script>
+{% endblock %}
+
+{% block modals %}{{ super() }}
+<!-- Modal nota interna -->
+<div id="modal-note" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+    <h3 class="font-bold text-slate-800 mb-3">📝 Nota interna</h3>
+    <p class="text-xs text-slate-400 mb-3">Visible solo para el equipo, no se envía al paciente.</p>
+    <textarea id="note-textarea" rows="5" class="form-input w-full resize-none" placeholder="Escribí una nota sobre este turno..."></textarea>
+    <div class="flex gap-3 mt-4">
+      <button onclick="saveNote()" class="btn-primary flex-1">Guardar</button>
+      <button onclick="document.getElementById('modal-note').classList.add('hidden')" class="btn-outline">Cancelar</button>
+    </div>
+  </div>
+</div>
 {% endblock %}

@@ -180,7 +180,43 @@ def process_message(phone: str, text: str, db: Session, clinic_id: int) -> str:
         s = _get_session(phone)
         s["clinic_id"] = clinic_id
 
+    # Respuesta al recordatorio: SI confirma, NO cancela — solo en estado INICIO
+    if s["state"] == "INICIO" and text_lower in ["si", "sí", "yes", "confirmo", "confirmar", "no", "no puedo", "no voy"]:
+        clean = phone.replace("whatsapp:", "").replace("+", "").strip()
+        patient_rem = db.query(models.Patient).filter(
+            models.Patient.clinic_id == clinic_id,
+            models.Patient.phone.contains(clean[-8:]),
+        ).first()
+        if patient_rem:
+            from datetime import timedelta as _td, date as _dt2
+            tomorrow = (_dt2.today() + _td(days=1)).isoformat()
+            appt_rem = db.query(models.Appointment).filter(
+                models.Appointment.patient_id == patient_rem.id,
+                models.Appointment.date == tomorrow,
+                models.Appointment.status.in_(["pending", "confirmed"]),
+            ).order_by(models.Appointment.time).first()
+            if appt_rem:
+                if text_lower in ["si", "sí", "yes", "confirmo", "confirmar"]:
+                    appt_rem.status = "confirmed"
+                    db.commit()
+                    return (
+                        f"✅ ¡Perfecto! Tu turno del {_fecha_legible(appt_rem.date)} "
+                        f"a las {appt_rem.time} hs está confirmado.\n\n"
+                        f"Te esperamos en *{clinic_name}*. 🏥"
+                    )
+                else:
+                    appt_rem.status = "cancelled"
+                    db.commit()
+                    return (
+                        f"❌ Turno del {_fecha_legible(appt_rem.date)} a las {appt_rem.time} hs cancelado.\n\n"
+                        f"Cuando quieras sacar otro turno, escribí *hola*. 😊"
+                    )
+
     # Atajo directo: "cancelar" va directamente a la lista de turnos
+    if text_lower in ["reprogramar", "quiero reprogramar", "cambiar turno"] and s["state"] not in ["REPROGRAMAR_LISTA"]:
+        s["state"] = "REPROGRAMAR_LISTA"
+        return _mostrar_turnos_paciente(phone, db, clinic_id, s, solo_ver=False, reprogramar=True)
+
     if text_lower in ["cancelar", "quiero cancelar", "cancelar turno"] and s["state"] not in ["CANCELAR_LISTA", "CANCELAR_CONFIRMAR"]:
         _reset(phone)
         s = _get_session(phone)
@@ -196,7 +232,8 @@ def process_message(phone: str, text: str, db: Session, clinic_id: int) -> str:
             f"¿En qué te puedo ayudar?\n\n"
             f"1️⃣ Sacar un turno\n"
             f"2️⃣ Cancelar un turno\n"
-            f"3️⃣ Ver mis turnos\n\n"
+            f"3️⃣ Ver mis turnos\n"
+            f"4️⃣ Reprogramar un turno\n\n"
             f"Respondé con el número de la opción 👆"
         )
 
@@ -241,12 +278,17 @@ def process_message(phone: str, text: str, db: Session, clinic_id: int) -> str:
         elif text == "3":
             return _mostrar_turnos_paciente(phone, db, clinic_id, s, solo_ver=True)
 
+        elif text == "4":
+            s["state"] = "REPROGRAMAR_LISTA"
+            return _mostrar_turnos_paciente(phone, db, clinic_id, s, solo_ver=False, reprogramar=True)
+
         else:
             return (
                 "No entendí 😅 Por favor elegí una opción:\n\n"
                 "1️⃣ Sacar un turno\n"
                 "2️⃣ Cancelar un turno\n"
-                "3️⃣ Ver mis turnos"
+                "3️⃣ Ver mis turnos\n"
+                "4️⃣ Reprogramar un turno"
             )
 
     # ── ESTADO: ELEGIR ESPECIALIDAD ───────────────────────────────────────────
@@ -377,6 +419,42 @@ def process_message(phone: str, text: str, db: Session, clinic_id: int) -> str:
             )
 
     # ── ESTADO: CANCELAR TURNO ────────────────────────────────────────────────
+    # ── ESTADO: REPROGRAMAR_LISTA ─────────────────────────────────────────────
+    if s["state"] == "REPROGRAMAR_LISTA":
+        if text == "0":
+            s["state"] = "MENU"
+            return "De acuerdo. ¿En qué más te puedo ayudar?\n\n1️⃣ Sacar un turno\n2️⃣ Cancelar un turno\n3️⃣ Ver mis turnos\n4️⃣ Reprogramar un turno"
+        appt_id = (s.get("opciones") or {}).get(text, {}).get("appt_id")
+        if not appt_id:
+            return f"Por favor elegí un número válido 👆"
+        appt = db.query(models.Appointment).filter_by(id=appt_id, clinic_id=clinic_id).first()
+        if appt:
+            appt.status = "cancelled"
+            db.commit()
+        # Arrancar flujo de nuevo turno
+        profesionales = db.query(models.Professional).filter_by(clinic_id=clinic_id, active=True).all()
+        if not profesionales:
+            s["state"] = "INICIO"
+            return "😕 No hay profesionales disponibles. Llamanos al teléfono de la clínica."
+        especialidades = []
+        seen = set()
+        for p in profesionales:
+            esp = p.specialty or "General"
+            if esp not in seen:
+                especialidades.append(esp)
+                seen.add(esp)
+        if len(especialidades) == 1:
+            s["specialty_name"] = especialidades[0]
+            return "✅ Turno anterior cancelado. Ahora elegí el nuevo horario:\n\n" + _resolver_profesionales(db, s, clinic_id, profesionales)
+        s["state"] = "ESPECIALIDAD_LISTA"
+        s["opciones"] = {}
+        msg = "✅ Turno anterior cancelado. Ahora elegí la especialidad para el nuevo turno:\n\n"
+        for i, esp in enumerate(especialidades, 1):
+            s["opciones"][str(i)] = {"specialty": esp}
+            msg += f"{i}️⃣ {esp}\n"
+        msg += "\nRespondé con el número de la especialidad 👆"
+        return msg
+
     if s["state"] == "CANCELAR_LISTA":
         if text_lower in ["0", "volver", "no", "ninguno"]:
             _reset(phone)
@@ -522,7 +600,7 @@ def _resumen_turno(s: dict) -> str:
     )
 
 
-def _mostrar_turnos_paciente(phone: str, db: Session, clinic_id: int, s: dict, solo_ver: bool = False) -> str:
+def _mostrar_turnos_paciente(phone: str, db: Session, clinic_id: int, s: dict, solo_ver: bool = False, reprogramar: bool = False) -> str:
     clean = phone.replace("whatsapp:", "").replace("+", "").strip()
     patient = db.query(models.Patient).filter(
         models.Patient.clinic_id == clinic_id,
@@ -559,10 +637,10 @@ def _mostrar_turnos_paciente(phone: str, db: Session, clinic_id: int, s: dict, s
         return msg
     else:
         s["opciones"] = {}
-        msg = f"¿Cuál turno querés cancelar?\n\n"
+        msg = f"¿Cuál turno querés {'reprogramar' if reprogramar else 'cancelar'}?\n\n"
         for i, t in enumerate(turnos, 1):
             prof = t.professional.name if t.professional else "Profesional"
             s["opciones"][str(i)] = {"appt_id": t.id}
             msg += f"🔵 *{i}.* {_fecha_legible(t.date)} · {t.time} hs · {prof}\n"
-        msg += "\n🔵 *0.* Volver sin cancelar\n\nElegí el número del turno a cancelar."
+        msg += f"\n🔵 *0.* Volver\n\nElegí el número del turno a {'reprogramar' if reprogramar else 'cancelar'}."
         return msg

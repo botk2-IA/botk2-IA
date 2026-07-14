@@ -80,8 +80,20 @@
           ⚠️ El bot no está activo. Ingresá el Phone ID y el Token para habilitarlo.
         </div>
         {% else %}
-        <div class="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-xs text-green-700">
-          ✓ Bot activo. Phone ID: <code class="font-mono">{{ wa_phone_id }}</code>
+        <div class="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-xs text-green-700 space-y-2">
+          <p>✓ Bot activo. Phone ID: <code class="font-mono">{{ wa_phone_id }}</code></p>
+          {% if clinic.whatsapp %}
+          {% set wa_clean = clinic.whatsapp | replace('+','') | replace(' ','') | replace('-','') %}
+          <p>
+            📲 Probá el bot:
+            <a href="https://wa.me/{{ wa_clean }}?text=hola" target="_blank"
+               class="underline font-semibold hover:text-green-900">
+              wa.me/{{ wa_clean }}
+            </a>
+          </p>
+          {% else %}
+          <p class="text-amber-600">💡 Agregá el número de WhatsApp de la clínica en "Datos generales" para obtener el link directo al bot.</p>
+          {% endif %}
         </div>
         {% endif %}
       </div>

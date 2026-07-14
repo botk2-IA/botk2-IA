@@ -6,6 +6,12 @@
 {% block content %}
 <div class="max-w-4xl mx-auto">
 
+  {% if request.query_params.get('cancelled') %}
+  <div class="mb-5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-600 font-medium">
+    ✅ Suscripción cancelada. Tu cuenta está ahora en el plan Free.
+  </div>
+  {% endif %}
+
   {% if request.query_params.get('limit') == 'professionals' %}
   <div class="mb-5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800 font-medium">
     ⚠️ Alcanzaste el límite de profesionales de tu plan. Mejorá para agregar más.
@@ -100,5 +106,30 @@
   </div>
 
   <p class="text-center text-xs text-slate-400 mt-6">Los pagos se procesan de forma segura a través de MercadoPago.</p>
+
+  {% if clinic.plan and clinic.plan != 'free' %}
+  <div class="mt-8 text-center">
+    <button onclick="document.getElementById('modal-cancel-plan').classList.remove('hidden')"
+            class="text-xs text-slate-400 hover:text-red-500 underline transition-colors">
+      Cancelar suscripción
+    </button>
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Modal confirmación cancelar plan -->
+<div id="modal-cancel-plan" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 text-center">
+    <div class="text-4xl mb-3">⚠️</div>
+    <h3 class="font-bold text-slate-800 mb-2">¿Cancelar suscripción?</h3>
+    <p class="text-sm text-slate-500 mb-5">Tu cuenta pasará al plan <strong>Free</strong> y perderás acceso a las funciones del plan <strong class="capitalize">{{ clinic.plan }}</strong>.</p>
+    <div class="flex gap-3">
+      <form method="post" action="/subscription/cancel" class="flex-1">
+        <button type="submit" class="w-full py-2 rounded-lg bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors">Sí, cancelar</button>
+      </form>
+      <button onclick="document.getElementById('modal-cancel-plan').classList.add('hidden')" class="flex-1 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50">Volver</button>
+    </div>
+  </div>
 </div>
 {% endblock %}
