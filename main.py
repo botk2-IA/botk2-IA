@@ -51,8 +51,9 @@ _scheduler = BackgroundScheduler(timezone="America/Argentina/Buenos_Aires")
 async def _lifespan(app: FastAPI):
     # Recordatorio diario a las 9:00 AM hora Argentina
     _scheduler.add_job(reminders_module.send_reminders, "cron", hour=9, minute=0, id="daily_reminders")
+    _scheduler.add_job(reminders_module.auto_complete_past_appointments, "cron", hour=23, minute=59, id="auto_complete")
     _scheduler.start()
-    print("[Scheduler] Recordatorios automáticos activos (9:00 AM diario)")
+    print("[Scheduler] Recordatorios activos (9:00 AM) + AutoComplete (23:59)")
     yield
     _scheduler.shutdown(wait=False)
 
@@ -74,6 +75,11 @@ def health_check():
 @app.get("/privacy", response_class=HTMLResponse)
 def privacy_policy(request: Request):
     return templates.TemplateResponse("privacy.html", {"request": request})
+
+
+@app.get("/terms", response_class=HTMLResponse)
+def terms_and_conditions(request: Request):
+    return templates.TemplateResponse("terms.html", {"request": request})
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -130,6 +136,13 @@ def register(
     prof = models.Professional(clinic_id=clinic.id, name=f"Dr. {name.split()[0]}", specialty="General")
     db.add(prof)
     db.commit()
+
+    # Email de bienvenida (no bloquea si falla)
+    try:
+        import emails as emails_module
+        emails_module.send_welcome(clinic.name, clinic.email)
+    except Exception as _e:
+        print(f"[Register] Email bienvenida falló: {_e}")
 
     token = auth_module.create_access_token({"sub": str(clinic.id)})
     response = RedirectResponse("/onboarding", status_code=302)
@@ -409,6 +422,59 @@ def patients_list(
     })
 
 
+@app.post("/patients/import")
+async def patients_import(
+    request: Request,
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    from fastapi import UploadFile
+    form  = await request.form()
+    file  = form.get("file")
+    import csv, io
+    contents = await file.read()
+    # Detectar encoding
+    try:
+        text = contents.decode("utf-8-sig")
+    except Exception:
+        text = contents.decode("latin-1")
+
+    reader = csv.DictReader(io.StringIO(text))
+    # Normalizar headers (lowercase, sin espacios)
+    def norm(h): return h.lower().strip().replace(" ", "_").replace("é","e").replace("ó","o").replace("í","i").replace("á","a").replace("ú","u")
+
+    imported = 0
+    skipped  = 0
+    for row in reader:
+        row = {norm(k): (v or "").strip() for k, v in row.items()}
+        name = row.get("nombre") or row.get("name") or row.get("paciente") or ""
+        if not name:
+            skipped += 1
+            continue
+        phone    = row.get("telefono") or row.get("phone") or row.get("celular") or ""
+        email    = row.get("email") or row.get("correo") or ""
+        dni      = row.get("dni") or row.get("documento") or ""
+        birth    = row.get("fecha_nacimiento") or row.get("nacimiento") or row.get("birth_date") or ""
+        insurance= row.get("obra_social") or row.get("seguro") or row.get("insurance") or ""
+        notes    = row.get("notas") or row.get("notes") or ""
+        # Evitar duplicados por nombre+teléfono
+        exists = db.query(models.Patient).filter_by(
+            clinic_id=clinic.id, name=name
+        ).first()
+        if exists:
+            skipped += 1
+            continue
+        db.add(models.Patient(
+            clinic_id=clinic.id, name=name, phone=phone,
+            email=email, dni=dni, birth_date=birth,
+            insurance=insurance, notes=notes,
+        ))
+        imported += 1
+
+    db.commit()
+    return RedirectResponse(f"/patients?imported={imported}&skipped={skipped}", status_code=302)
+
+
 @app.post("/patients/new")
 def patient_create(
     request: Request,
@@ -457,6 +523,46 @@ def patient_edit(
     patient.notes = notes
     db.commit()
     return RedirectResponse("/patients", status_code=302)
+
+
+@app.post("/patients/{patient_id}/whatsapp")
+async def patient_send_whatsapp(
+    patient_id: int,
+    request: Request,
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    import httpx as _httpx
+    data = await request.json()
+    msg = (data.get("message") or "").strip()
+    if not msg:
+        return JSONResponse({"ok": False, "error": "Mensaje vacío"})
+
+    patient = db.query(models.Patient).filter_by(id=patient_id, clinic_id=clinic.id).first()
+    if not patient or not patient.phone:
+        return JSONResponse({"ok": False, "error": "Paciente sin teléfono"})
+
+    wa_token    = clinic.wa_token    or os.environ.get("WHATSAPP_TOKEN", "")
+    wa_phone_id = clinic.wa_phone_id or os.environ.get("WHATSAPP_PHONE_ID", "")
+    if not wa_token or not wa_phone_id:
+        return JSONResponse({"ok": False, "error": "WhatsApp no configurado en Ajustes"})
+
+    phone = patient.phone.replace("+", "").replace(" ", "").replace("-", "").strip()
+    if not phone.startswith("549"):
+        phone = "549" + phone.lstrip("0") if not phone.startswith("54") else "549" + phone[2:].lstrip("0")
+
+    try:
+        r = _httpx.post(
+            f"https://graph.facebook.com/v21.0/{wa_phone_id}/messages",
+            headers={"Authorization": f"Bearer {wa_token}", "Content-Type": "application/json"},
+            json={"messaging_product": "whatsapp", "to": phone, "type": "text", "text": {"body": msg}},
+            timeout=10,
+        )
+        if r.status_code == 200:
+            return JSONResponse({"ok": True})
+        return JSONResponse({"ok": False, "error": f"Error WhatsApp: {r.status_code}"})
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)})
 
 
 @app.post("/patients/{patient_id}/delete")
@@ -621,6 +727,57 @@ def appointments_list(
     })
 
 
+@app.get("/appointments/export")
+def appointments_export(
+    date_from: str = "",
+    date_to: str = "",
+    status_filter: str = "",
+    professional_filter: str = "",
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    """Exporta turnos a CSV según los filtros aplicados."""
+    import csv, io
+    from fastapi.responses import StreamingResponse
+
+    q = db.query(models.Appointment).filter_by(clinic_id=clinic.id)
+    if date_from:
+        q = q.filter(models.Appointment.date >= date_from)
+    if date_to:
+        q = q.filter(models.Appointment.date <= date_to)
+    if status_filter:
+        q = q.filter(models.Appointment.status == status_filter)
+    if professional_filter:
+        try:
+            q = q.filter(models.Appointment.professional_id == int(professional_filter))
+        except ValueError:
+            pass
+    appts = q.order_by(models.Appointment.date, models.Appointment.time).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(["Fecha", "Hora", "Paciente", "Teléfono", "Profesional", "Especialidad", "Estado", "Motivo"])
+    STATUS_MAP = {"pending": "Pendiente", "confirmed": "Confirmado", "completed": "Completado", "cancelled": "Cancelado"}
+    for a in appts:
+        writer.writerow([
+            a.date, a.time,
+            a.patient.name if a.patient else "",
+            a.patient.phone if a.patient else "",
+            a.professional.name if a.professional else "",
+            a.professional.specialty if a.professional else "",
+            STATUS_MAP.get(a.status, a.status),
+            a.reason or "",
+        ])
+
+    output.seek(0)
+    filename = f"turnos_{clinic.name.replace(' ', '_')}_{date.today().isoformat()}.csv"
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
 @app.post("/appointments/new")
 def appointment_create(
     patient_id: int = Form(...),
@@ -667,6 +824,21 @@ def appointment_update_status(
         appt.status = new_status
         db.commit()
     return RedirectResponse(f"/appointments?date_filter={appt.date}", status_code=302)
+
+
+@app.post("/appointments/{appt_id}/note")
+async def appointment_save_note(
+    appt_id: int,
+    request: Request,
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    data = await request.json()
+    appt = db.query(models.Appointment).filter_by(id=appt_id, clinic_id=clinic.id).first()
+    if appt:
+        appt.notes = data.get("notes", "")
+        db.commit()
+    return JSONResponse({"ok": True})
 
 
 @app.post("/appointments/{appt_id}/delete")
@@ -1415,6 +1587,16 @@ def subscribe_page(
         "plan":      plan,
         "plan_info": plan_info,
     })
+
+
+@app.post("/subscription/cancel")
+def subscription_cancel(
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    clinic.plan = "free"
+    db.commit()
+    return RedirectResponse("/pricing?cancelled=1", status_code=302)
 
 
 @app.post("/subscribe/{plan}/mercadopago")

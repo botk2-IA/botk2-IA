@@ -5,10 +5,21 @@
 {% block page_subtitle %}{{ patients | length }} pacientes registrados{% endblock %}
 
 {% block page_actions %}
-<button onclick="document.getElementById('modal-new').classList.remove('hidden')" class="btn-primary">+ Nuevo paciente</button>
+<div class="flex gap-2">
+  <button onclick="document.getElementById('modal-import').classList.remove('hidden')" class="btn-outline text-sm">⬆ Importar CSV</button>
+  <button onclick="document.getElementById('modal-new').classList.remove('hidden')" class="btn-primary">+ Nuevo paciente</button>
+</div>
 {% endblock %}
 
 {% block content %}
+
+{% if request.query_params.get('imported') %}
+<div class="mb-4 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-700">
+  ✅ Importación completada: <strong>{{ request.query_params.get('imported') }} pacientes</strong> agregados
+  {% if request.query_params.get('skipped') != '0' %} · {{ request.query_params.get('skipped') }} omitidos (duplicados o sin nombre){% endif %}
+</div>
+{% endif %}
+
 <form method="get" class="mb-5">
   <div class="flex gap-2">
     <input name="search" value="{{ search }}" placeholder="Buscar por nombre, teléfono, email u obra social..."
@@ -54,6 +65,10 @@
         </td>
         <td class="px-4 py-3">
           <div class="flex items-center gap-1 justify-end">
+            {% if p.phone %}
+            <button onclick="openWA({{ p.id }}, '{{ p.name | replace("'", "\\'") }}')"
+              title="Enviar WhatsApp" class="bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-green-200 transition-colors">💬</button>
+            {% endif %}
             <button onclick="editPatient({{ p.id }}, '{{ p.name | replace("'", "\\'") }}', '{{ p.phone or '' }}', '{{ p.email or '' }}', '{{ p.dni or '' }}', '{{ p.birth_date or '' }}', '{{ p.insurance or '' }}', '{{ p.notes or '' | replace("'", "\\'") | replace("\n", " ") }}')"
               class="btn-outline text-xs px-2.5 py-1.5">Editar</button>
             <form method="post" action="/patients/{{ p.id }}/delete" onsubmit="return confirm('¿Eliminar paciente?')" style="display:inline">
@@ -146,8 +161,72 @@
 </div>
 {% endblock %}
 
+{% block modals %}{{ super() }}
+<!-- Modal WhatsApp manual -->
+<!-- Modal importar CSV -->
+<div id="modal-import" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+    <h3 class="font-bold text-slate-800 mb-1">⬆ Importar pacientes desde CSV</h3>
+    <p class="text-xs text-slate-400 mb-4">El archivo debe tener columnas: <code class="bg-slate-100 px-1 rounded">Nombre, Telefono, Email, DNI, Obra Social</code>. Los pacientes que ya existen se omiten.</p>
+    <form method="post" action="/patients/import" enctype="multipart/form-data">
+      <input type="file" name="file" accept=".csv,.txt" required class="w-full text-sm text-slate-600 border border-slate-200 rounded-lg px-3 py-2 mb-4"/>
+      <div class="flex gap-3">
+        <button type="submit" class="btn-primary flex-1">Importar</button>
+        <button type="button" onclick="document.getElementById('modal-import').classList.add('hidden')" class="btn-outline">Cancelar</button>
+      </div>
+    </form>
+    <p class="text-xs text-slate-400 mt-3">
+      <a href="/static/plantilla_pacientes.csv" download class="text-blue-500 hover:underline">Descargar plantilla de ejemplo →</a>
+    </p>
+  </div>
+</div>
+
+<div id="modal-wa" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+    <h3 class="font-bold text-slate-800 mb-1">💬 Enviar WhatsApp</h3>
+    <p id="wa-patient-name" class="text-sm text-slate-500 mb-3"></p>
+    <textarea id="wa-msg" rows="5" class="form-input w-full resize-none" placeholder="Escribí el mensaje..."></textarea>
+    <p id="wa-result" class="text-xs mt-2 hidden"></p>
+    <div class="flex gap-3 mt-4">
+      <button onclick="sendWA()" class="btn-primary flex-1">Enviar</button>
+      <button onclick="document.getElementById('modal-wa').classList.add('hidden')" class="btn-outline">Cancelar</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
 {% block scripts %}
 <script>
+let _waPatientId = null;
+function openWA(id, name) {
+  _waPatientId = id;
+  document.getElementById('wa-patient-name').textContent = 'Para: ' + name;
+  document.getElementById('wa-msg').value = '';
+  document.getElementById('wa-result').classList.add('hidden');
+  document.getElementById('modal-wa').classList.remove('hidden');
+  setTimeout(() => document.getElementById('wa-msg').focus(), 50);
+}
+function sendWA() {
+  const msg = document.getElementById('wa-msg').value.trim();
+  if (!msg) return;
+  fetch(`/patients/${_waPatientId}/whatsapp`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({message: msg})
+  }).then(r => r.json()).then(data => {
+    const el = document.getElementById('wa-result');
+    el.classList.remove('hidden');
+    if (data.ok) {
+      el.className = 'text-xs mt-2 text-green-600';
+      el.textContent = '✅ Mensaje enviado';
+      setTimeout(() => document.getElementById('modal-wa').classList.add('hidden'), 1500);
+    } else {
+      el.className = 'text-xs mt-2 text-red-500';
+      el.textContent = '❌ ' + (data.error || 'Error al enviar');
+    }
+  });
+}
+
 function editPatient(id, name, phone, email, dni, birth, insurance, notes) {
   document.getElementById('form-edit').action = '/patients/' + id + '/edit';
   document.getElementById('edit-name').value = name;
