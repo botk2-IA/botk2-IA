@@ -34,6 +34,8 @@ def _run_migration():
         "ALTER TABLE professionals ADD COLUMN IF NOT EXISTS work_days VARCHAR(20) DEFAULT '0,1,2,3,4'",
         "ALTER TABLE professionals ADD COLUMN IF NOT EXISTS work_start VARCHAR(10) DEFAULT '09:00'",
         "ALTER TABLE professionals ADD COLUMN IF NOT EXISTS work_end VARCHAR(10) DEFAULT '18:00'",
+        "ALTER TABLE appointments ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT ''",
+        "ALTER TABLE patients ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT ''",
     ]
     with database.engine.connect() as conn:
         for sql in migrations:

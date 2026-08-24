@@ -314,6 +314,19 @@
     </form>
   </div>
 </div>
+
+<!-- Modal nota interna -->
+<div id="modal-note" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
+    <h3 class="font-bold text-slate-800 mb-3">📝 Nota interna</h3>
+    <p class="text-xs text-slate-400 mb-3">Visible solo para el equipo, no se envía al paciente.</p>
+    <textarea id="note-textarea" rows="5" class="form-input w-full resize-none" placeholder="Escribí una nota sobre este turno..."></textarea>
+    <div class="flex gap-3 mt-4">
+      <button onclick="saveNote()" class="btn-primary flex-1">Guardar</button>
+      <button onclick="document.getElementById('modal-note').classList.add('hidden')" class="btn-outline">Cancelar</button>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -389,19 +402,4 @@ function saveNote() {
   }).then(() => location.reload());
 }
 </script>
-{% endblock %}
-
-{% block modals %}{{ super() }}
-<!-- Modal nota interna -->
-<div id="modal-note" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
-    <h3 class="font-bold text-slate-800 mb-3">📝 Nota interna</h3>
-    <p class="text-xs text-slate-400 mb-3">Visible solo para el equipo, no se envía al paciente.</p>
-    <textarea id="note-textarea" rows="5" class="form-input w-full resize-none" placeholder="Escribí una nota sobre este turno..."></textarea>
-    <div class="flex gap-3 mt-4">
-      <button onclick="saveNote()" class="btn-primary flex-1">Guardar</button>
-      <button onclick="document.getElementById('modal-note').classList.add('hidden')" class="btn-outline">Cancelar</button>
-    </div>
-  </div>
-</div>
 {% endblock %}
