@@ -110,3 +110,38 @@ def send_welcome(clinic_name: str, to_email: str) -> bool:
 </html>
 """
     return _send(to_email, subject, html)
+
+
+def send_plan_expiring(clinic_name: str, to_email: str, plan: str, expires_on: str) -> bool:
+    subject = f"Tu plan {plan.capitalize()} de Botk2-IA vence el {expires_on}"
+    html = f"""
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"/></head>
+<body style="margin:0;padding:40px 20px;background:#f1f5f9;font-family:Arial,sans-serif;">
+<table width="560" align="center" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;">
+  <tr><td style="background:#1e40af;padding:28px 40px;">
+    <h1 style="margin:0;color:#ffffff;font-size:22px;">Botk2-IA</h1>
+  </td></tr>
+  <tr><td style="padding:36px 40px;">
+    <h2 style="margin:0 0 16px;color:#1e293b;font-size:20px;">Hola, {clinic_name}</h2>
+    <p style="margin:0 0 16px;color:#475569;font-size:15px;line-height:1.6;">
+      Tu plan <b>{plan.capitalize()}</b> está activo hasta el <b>{expires_on}</b>.
+      Para que el bot y tus funciones sigan sin interrupciones, renovalo antes de esa fecha.
+      Si no lo renovás, tu cuenta pasa al plan Free y tus datos se conservan.
+    </p>
+    <p style="text-align:center;padding:8px 0 16px;">
+      <a href="https://botk2ia.com/pricing"
+         style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;font-size:15px;font-weight:700;padding:14px 36px;border-radius:10px;">
+        Renovar plan →
+      </a>
+    </p>
+    <p style="margin:0;color:#94a3b8;font-size:13px;">
+      ¿Dudas? Escribinos a <a href="mailto:botk2ia@gmail.com" style="color:#2563eb;">botk2ia@gmail.com</a>.
+    </p>
+  </td></tr>
+</table>
+</body>
+</html>
+"""
+    return _send(to_email, subject, html)

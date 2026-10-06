@@ -132,19 +132,19 @@
       <td class="px-4 py-3 text-center">
         <div class="flex gap-1 justify-center">
           {% if appt.status == 'pending' %}
-          <form method="post" action="/appointments/{{ appt.id }}/status" style="display:inline">
+          <form method="post" action="/appointments/{{ appt.id }}/status" style="display:inline">{{ csrf_input(request) }}
             <input type="hidden" name="new_status" value="confirmed"/>
             <button type="submit" title="Confirmar" class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded hover:bg-green-200">✓</button>
           </form>
           {% endif %}
           {% if appt.status not in ['cancelled','completed'] %}
-          <form method="post" action="/appointments/{{ appt.id }}/status" style="display:inline">
+          <form method="post" action="/appointments/{{ appt.id }}/status" style="display:inline">{{ csrf_input(request) }}
             <input type="hidden" name="new_status" value="cancelled"/>
             <button type="submit" title="Cancelar" class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded hover:bg-red-200">✗</button>
           </form>
           {% endif %}
           {% if appt.status == 'confirmed' %}
-          <form method="post" action="/appointments/{{ appt.id }}/status" style="display:inline">
+          <form method="post" action="/appointments/{{ appt.id }}/status" style="display:inline">{{ csrf_input(request) }}
             <input type="hidden" name="new_status" value="completed"/>
             <button type="submit" title="Completado" class="bg-slate-100 text-slate-600 text-xs font-bold px-2 py-1 rounded hover:bg-slate-200">✔</button>
           </form>
@@ -155,7 +155,7 @@
         <div class="flex gap-1 justify-end">
           <button onclick="openNote({{ appt.id }}, `{{ appt.notes | replace('`','\\`') }}`)"
                   title="Nota interna" class="text-xs px-2 py-1 rounded border border-slate-200 hover:bg-amber-50 hover:border-amber-300 transition-colors {% if appt.notes %}text-amber-600{% else %}text-slate-400{% endif %}">📝</button>
-          <form method="post" action="/appointments/{{ appt.id }}/delete" onsubmit="return confirm('¿Eliminar turno?')" style="display:inline">
+          <form method="post" action="/appointments/{{ appt.id }}/delete" onsubmit="return confirm('¿Eliminar turno?')" style="display:inline">{{ csrf_input(request) }}
             <button type="submit" class="text-xs text-red-400 hover:text-red-600 px-2 py-1 rounded border border-slate-200 hover:border-red-300 transition-colors">Eliminar</button>
           </form>
         </div>
@@ -275,7 +275,7 @@
       <h3 class="font-bold text-slate-800">Nuevo turno</h3>
       <button onclick="document.getElementById('modal-new').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
     </div>
-    <form method="post" action="/appointments/new" class="px-6 py-5 space-y-4" onsubmit="return validatePatient()">
+    <form method="post" action="/appointments/new" class="px-6 py-5 space-y-4" onsubmit="return validatePatient()">{{ csrf_input(request) }}
       <div>
         <label class="form-label">Paciente *</label>
         <div style="position:relative">
@@ -397,7 +397,7 @@ function saveNote() {
   if (!_noteApptId) return;
   fetch(`/appointments/${_noteApptId}/note`, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: {'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN},
     body: JSON.stringify({notes: document.getElementById('note-textarea').value})
   }).then(() => location.reload());
 }

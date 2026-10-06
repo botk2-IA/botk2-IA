@@ -17,11 +17,7 @@
     {% else %}
     <h2 class="text-2xl font-bold text-slate-800 mb-2">¡Plan {{ plan_name }} activado!</h2>
     <p class="text-slate-500 mb-6">
-      {% if is_demo %}
-      (Modo demo — en producción el pago pasaría por MercadoPago.)
-      {% else %}
       Tu suscripción está activa. El bot seguirá funcionando sin interrupciones.
-      {% endif %}
     </p>
     {% endif %}
 

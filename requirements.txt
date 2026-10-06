@@ -25,3 +25,6 @@ stripe==9.12.0               # Stripe (internacional)
 
 # Scheduler (recordatorios automáticos)
 apscheduler==3.10.4
+
+# Copias de seguridad automáticas a S3 / R2 / B2 (opcional)
+boto3==1.34.131

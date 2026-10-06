@@ -79,6 +79,31 @@ def verify_mp_webhook(data: dict) -> Optional[dict]:
     return None
 
 
+def verify_mp_payment(payment_id: str) -> Optional[dict]:
+    """Consulta un pago puntual a MercadoPago (usado al volver del checkout)."""
+    return verify_mp_webhook({"topic": "payment", "id": payment_id})
+
+
+def verify_stripe_session(session_id: str) -> Optional[dict]:
+    """Consulta una sesion de Checkout a Stripe (usado al volver del checkout)."""
+    if not STRIPE_SECRET_KEY:
+        return None
+    try:
+        import stripe  # type: ignore
+        stripe.api_key = STRIPE_SECRET_KEY
+        session = stripe.checkout.Session.retrieve(session_id)
+        if session.get("payment_status") == "paid":
+            return {
+                "clinic_id": int(session["client_reference_id"]),
+                "plan":      (session.get("metadata") or {}).get("plan"),
+                "status":    "paid",
+                "payment_id": session["id"],
+            }
+    except Exception as e:
+        print(f"[Stripe] Error verificando sesion: {e}")
+    return None
+
+
 def create_stripe_session(plan: str, clinic_id: int, clinic_email: str) -> Optional[str]:
     if not STRIPE_SECRET_KEY:
         return None
@@ -126,6 +151,7 @@ def verify_stripe_webhook(payload: bytes, sig_header: str) -> Optional[dict]:
                     "clinic_id": int(session["client_reference_id"]),
                     "plan":      session["metadata"].get("plan"),
                     "status":    "paid",
+                    "payment_id": session["id"],
                 }
     except Exception as e:
         print(f"[Stripe] Error verificando webhook: {e}")

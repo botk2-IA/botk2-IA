@@ -47,7 +47,7 @@
       <h2 class="text-xl font-bold text-slate-800">Datos de tu clínica</h2>
       <p class="text-slate-500 text-sm mt-1">Confirmá la información básica de tu consultorio.</p>
     </div>
-    <form method="post" action="/onboarding/step1" class="px-8 py-6 space-y-4">
+    <form method="post" action="/onboarding/step1" class="px-8 py-6 space-y-4">{{ csrf_input(request) }}
       <div>
         <label class="block text-sm font-semibold text-slate-700 mb-1">Nombre de la clínica *</label>
         <input name="name" value="{{ clinic.name }}" required
@@ -76,7 +76,7 @@
       <h2 class="text-xl font-bold text-slate-800">Agregá tu primer profesional</h2>
       <p class="text-slate-500 text-sm mt-1">Los pacientes van a poder elegir especialidad y profesional por WhatsApp.</p>
     </div>
-    <form method="post" action="/onboarding/step2" class="px-8 py-6 space-y-4">
+    <form method="post" action="/onboarding/step2" class="px-8 py-6 space-y-4">{{ csrf_input(request) }}
       <div>
         <label class="block text-sm font-semibold text-slate-700 mb-1">Nombre completo *</label>
         <input name="prof_name" required placeholder="Dr. Juan Pérez"
@@ -145,7 +145,7 @@
       </div>
     </div>
 
-    <form method="post" action="/onboarding/step3" class="px-8 pb-6 space-y-4">
+    <form method="post" action="/onboarding/step3" class="px-8 pb-6 space-y-4">{{ csrf_input(request) }}
       <div>
         <label class="block text-sm font-semibold text-slate-700 mb-1">Phone ID</label>
         <input name="wa_phone_id" value="{{ clinic.wa_phone_id or '' }}" placeholder="106932254906660"
@@ -164,7 +164,7 @@
         </button>
       </div>
       <div class="text-center">
-        <form method="post" action="/onboarding/skip" style="display:inline">
+        <form method="post" action="/onboarding/skip" style="display:inline">{{ csrf_input(request) }}
           <button type="submit" class="text-sm text-slate-400 hover:text-slate-600 underline">Configurar después</button>
         </form>
       </div>
@@ -201,7 +201,7 @@
         </div>
       </div>
 
-      <form method="post" action="/onboarding/complete">
+      <form method="post" action="/onboarding/complete">{{ csrf_input(request) }}
         <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl text-base transition-colors">
           Ir al panel →
         </button>
@@ -214,7 +214,7 @@
   <!-- Skip link -->
   {% if step < 4 %}
   <div class="text-center mt-4">
-    <form method="post" action="/onboarding/skip" style="display:inline">
+    <form method="post" action="/onboarding/skip" style="display:inline">{{ csrf_input(request) }}
       <button type="submit" class="text-slate-500 hover:text-slate-300 text-sm transition-colors">
         Saltar configuración y entrar al panel
       </button>

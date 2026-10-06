@@ -1,4 +1,6 @@
 import os
+import secrets
+import time
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
@@ -9,12 +11,56 @@ from sqlalchemy.orm import Session
 from database import get_db
 import models
 
-SECRET_KEY = os.environ.get("SECRET_KEY", "clinica-saas-secret-key-cambiar-en-produccion-2024")
+SECRET_KEY = os.environ.get("SECRET_KEY", "")
+if not SECRET_KEY:
+    # Sin clave fija en el código: se genera una por proceso.
+    # Las sesiones se pierden en cada reinicio hasta que se configure SECRET_KEY.
+    SECRET_KEY = secrets.token_hex(32)
+    print("[Auth] ADVERTENCIA: SECRET_KEY no configurada, usando una clave temporal")
 ALGORITHM  = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 días
 
+# Cookies solo por HTTPS cuando la app corre en un dominio https (producción)
+COOKIE_SECURE = os.environ.get("APP_URL", "").startswith("https://")
+
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login", auto_error=False)
+
+
+# ── Límite de intentos de login ──────────────────────────────────────────────
+MAX_LOGIN_ATTEMPTS   = 10
+LOGIN_WINDOW_SECONDS = 15 * 60
+_login_failures: dict[str, list[float]] = {}
+
+
+def client_ip(request: Request) -> str:
+    """IP real del cliente detrás del proxy de Railway."""
+    real_ip = request.headers.get("x-real-ip", "").strip()
+    if real_ip:
+        return real_ip
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        # El último valor lo agrega el proxy; los anteriores los puede inventar el cliente
+        return forwarded.split(",")[-1].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def login_blocked(key: str) -> bool:
+    cutoff = time.time() - LOGIN_WINDOW_SECONDS
+    recent = [t for t in _login_failures.get(key, []) if t > cutoff]
+    if recent:
+        _login_failures[key] = recent
+    else:
+        _login_failures.pop(key, None)
+    return len(recent) >= MAX_LOGIN_ATTEMPTS
+
+
+def register_login_failure(key: str) -> None:
+    _login_failures.setdefault(key, []).append(time.time())
+
+
+def clear_login_failures(key: str) -> None:
+    _login_failures.pop(key, None)
 
 
 def hash_password(password: str) -> str:

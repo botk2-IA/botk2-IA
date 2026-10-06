@@ -71,7 +71,7 @@
             {% endif %}
             <button onclick="editPatient({{ p.id }}, '{{ p.name | replace("'", "\\'") }}', '{{ p.phone or '' }}', '{{ p.email or '' }}', '{{ p.dni or '' }}', '{{ p.birth_date or '' }}', '{{ p.insurance or '' }}', '{{ p.notes or '' | replace("'", "\\'") | replace("\n", " ") }}')"
               class="btn-outline text-xs px-2.5 py-1.5">Editar</button>
-            <form method="post" action="/patients/{{ p.id }}/delete" onsubmit="return confirm('¿Eliminar paciente?')" style="display:inline">
+            <form method="post" action="/patients/{{ p.id }}/delete" onsubmit="return confirm('¿Eliminar paciente?')" style="display:inline">{{ csrf_input(request) }}
               <button type="submit" class="bg-red-100 text-red-700 text-xs font-semibold px-2.5 py-1.5 rounded hover:bg-red-200 transition-colors border-0 cursor-pointer">Eliminar</button>
             </form>
           </div>
@@ -99,7 +99,7 @@
       <h3 class="font-bold text-slate-800">Nuevo paciente</h3>
       <button onclick="document.getElementById('modal-new').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
     </div>
-    <form method="post" action="/patients/new" class="px-6 py-5 space-y-4">
+    <form method="post" action="/patients/new" class="px-6 py-5 space-y-4">{{ csrf_input(request) }}
       <div><label class="form-label">Nombre completo *</label>
         <input name="name" required class="form-input" placeholder="Ej: Juan Pérez"/></div>
       <div class="grid grid-cols-2 gap-3">
@@ -133,7 +133,7 @@
       <h3 class="font-bold text-slate-800">Editar paciente</h3>
       <button onclick="document.getElementById('modal-edit').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
     </div>
-    <form id="form-edit" method="post" class="px-6 py-5 space-y-4">
+    <form id="form-edit" method="post" class="px-6 py-5 space-y-4">{{ csrf_input(request) }}
       <div><label class="form-label">Nombre completo *</label>
         <input id="edit-name" name="name" required class="form-input"/></div>
       <div class="grid grid-cols-2 gap-3">
@@ -165,7 +165,7 @@
   <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">
     <h3 class="font-bold text-slate-800 mb-1">⬆ Importar pacientes desde CSV</h3>
     <p class="text-xs text-slate-400 mb-4">El archivo debe tener columnas: <code class="bg-slate-100 px-1 rounded">Nombre, Telefono, Email, DNI, Obra Social</code>. Los pacientes que ya existen se omiten.</p>
-    <form method="post" action="/patients/import" enctype="multipart/form-data">
+    <form method="post" action="/patients/import" enctype="multipart/form-data">{{ csrf_input(request) }}
       <input type="file" name="file" accept=".csv,.txt" required class="w-full text-sm text-slate-600 border border-slate-200 rounded-lg px-3 py-2 mb-4"/>
       <div class="flex gap-3">
         <button type="submit" class="btn-primary flex-1">Importar</button>
@@ -208,7 +208,7 @@ function sendWA() {
   if (!msg) return;
   fetch(`/patients/${_waPatientId}/whatsapp`, {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: {'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN},
     body: JSON.stringify({message: msg})
   }).then(r => r.json()).then(data => {
     const el = document.getElementById('wa-result');

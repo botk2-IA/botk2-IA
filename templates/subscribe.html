@@ -24,7 +24,7 @@
         <p class="text-xs text-slate-400">Tarjeta de crédito/débito, transferencia, efectivo</p>
       </div>
     </div>
-    <form method="post" action="/subscribe/{{ plan }}/mercadopago">
+    <form method="post" action="/subscribe/{{ plan }}/mercadopago">{{ csrf_input(request) }}
       <button type="submit" class="w-full py-3 rounded-xl font-bold text-white text-sm transition-colors"
               style="background:#009ee3;">
         Pagar con MercadoPago →

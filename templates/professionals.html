@@ -43,7 +43,7 @@
     <div class="flex gap-2 mt-3">
       <a href="/appointments" class="btn-outline flex-1 text-xs text-center">Ver agenda →</a>
       <button onclick="openSchedule({{ p.id }}, '{{ p.work_days or '0,1,2,3,4' }}', '{{ p.work_start or '09:00' }}', '{{ p.work_end or '18:00' }}')" class="btn-outline text-xs px-3">Horario</button>
-      <form method="post" action="/professionals/{{ p.id }}/delete" onsubmit="return confirm('¿Eliminar profesional?')" style="display:inline">
+      <form method="post" action="/professionals/{{ p.id }}/delete" onsubmit="return confirm('¿Eliminar profesional?')" style="display:inline">{{ csrf_input(request) }}
         <button type="submit" class="bg-red-100 text-red-700 text-xs font-semibold px-3 py-1.5 rounded hover:bg-red-200 transition-colors border-0 cursor-pointer">✕</button>
       </form>
     </div>
@@ -66,7 +66,7 @@
       <h3 class="font-bold text-slate-800">Nuevo profesional</h3>
       <button onclick="document.getElementById('modal-new').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
     </div>
-    <form method="post" action="/professionals/new" class="px-6 py-5 space-y-4">
+    <form method="post" action="/professionals/new" class="px-6 py-5 space-y-4">{{ csrf_input(request) }}
       <div><label class="form-label">Nombre *</label>
         <input name="name" required placeholder="Dr. Juan Pérez" class="form-input"/></div>
       <div><label class="form-label">Especialidad</label>
@@ -88,7 +88,7 @@
       <h3 class="font-bold text-slate-800">Horario de atención</h3>
       <button onclick="document.getElementById('modal-schedule').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
     </div>
-    <form id="form-schedule" method="post" class="px-6 py-5 space-y-5">
+    <form id="form-schedule" method="post" class="px-6 py-5 space-y-5">{{ csrf_input(request) }}
       <div>
         <label class="form-label mb-2">Días que atiende</label>
         <div class="flex gap-2 flex-wrap">

@@ -6,7 +6,7 @@
 
 {% block page_actions %}
 {% if pending_reminders %}
-<form method="post" action="/reminders/send-all" style="display:inline">
+<form method="post" action="/reminders/send-all" style="display:inline">{{ csrf_input(request) }}
   <button type="submit" class="btn-primary">Enviar todos ({{ pending_reminders | length }})</button>
 </form>
 {% endif %}
@@ -30,7 +30,7 @@
           {% if appt.professional %} · {{ appt.professional.name }}{% endif %}
         </p>
       </div>
-      <form method="post" action="/reminders/{{ appt.id }}/send">
+      <form method="post" action="/reminders/{{ appt.id }}/send">{{ csrf_input(request) }}
         <button type="submit" class="bg-green-100 hover:bg-green-200 text-green-700 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors border-0 cursor-pointer">
           Enviar recordatorio
         </button>

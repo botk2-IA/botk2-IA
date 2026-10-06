@@ -16,3 +16,6 @@ env/
 # Archivos del sistema
 .DS_Store
 Thumbs.db
+
+# Copias de seguridad (datos sensibles)
+*.json.gz

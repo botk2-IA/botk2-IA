@@ -8,7 +8,7 @@
 
   {% if request.query_params.get('cancelled') %}
   <div class="mb-5 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-600 font-medium">
-    ✅ Suscripción cancelada. Tu cuenta está ahora en el plan Free.
+    ✅ Plan cancelado. Tu cuenta está ahora en el plan Free.
   </div>
   {% endif %}
 
@@ -30,6 +30,9 @@
     <div>
       <p class="text-sm text-slate-500">Plan actual</p>
       <p class="font-bold text-slate-800 capitalize">{{ clinic.plan or "Free" }}</p>
+      {% if clinic.plan_expires_at %}
+      <p class="text-xs text-slate-500">Activo hasta el {{ clinic.plan_expires_at.strftime("%d/%m/%Y") }}</p>
+      {% endif %}
     </div>
   </div>
 
@@ -53,6 +56,8 @@
       </ul>
       {% if clinic.plan != 'starter' %}
       <a href="/subscribe/starter" class="btn-primary block text-center text-sm">Suscribirme</a>
+      {% elif clinic.plan_expires_at %}
+      <a href="/subscribe/starter" class="btn-primary block text-center text-sm">Renovar 30 días</a>
       {% else %}
       <button disabled class="w-full py-2 rounded-lg bg-slate-100 text-slate-400 text-sm font-semibold cursor-not-allowed">Plan activo</button>
       {% endif %}
@@ -75,6 +80,8 @@
       </ul>
       {% if clinic.plan != 'pro' %}
       <a href="/subscribe/pro" class="btn-primary block text-center text-sm">Suscribirme</a>
+      {% elif clinic.plan_expires_at %}
+      <a href="/subscribe/pro" class="btn-primary block text-center text-sm">Renovar 30 días</a>
       {% else %}
       <button disabled class="w-full py-2 rounded-lg bg-slate-100 text-slate-400 text-sm font-semibold cursor-not-allowed">Plan activo</button>
       {% endif %}
@@ -98,6 +105,8 @@
       </ul>
       {% if clinic.plan != 'clinica' %}
       <a href="/subscribe/clinica" class="btn-primary block text-center text-sm">Suscribirme</a>
+      {% elif clinic.plan_expires_at %}
+      <a href="/subscribe/clinica" class="btn-primary block text-center text-sm">Renovar 30 días</a>
       {% else %}
       <button disabled class="w-full py-2 rounded-lg bg-slate-100 text-slate-400 text-sm font-semibold cursor-not-allowed">Plan activo</button>
       {% endif %}
@@ -105,7 +114,7 @@
 
   </div>
 
-  <p class="text-center text-xs text-slate-400 mt-6">Los pagos se procesan de forma segura a través de MercadoPago.</p>
+  <p class="text-center text-xs text-slate-400 mt-6">Cada pago activa el plan por 30 días; te avisamos por email antes del vencimiento. Los pagos se procesan de forma segura a través de MercadoPago.</p>
 
   {% if clinic.plan and clinic.plan != 'free' %}
   <div class="mt-8 text-center">
@@ -125,7 +134,7 @@
     <h3 class="font-bold text-slate-800 mb-2">¿Cancelar suscripción?</h3>
     <p class="text-sm text-slate-500 mb-5">Tu cuenta pasará al plan <strong>Free</strong> y perderás acceso a las funciones del plan <strong class="capitalize">{{ clinic.plan }}</strong>.</p>
     <div class="flex gap-3">
-      <form method="post" action="/subscription/cancel" class="flex-1">
+      <form method="post" action="/subscription/cancel" class="flex-1">{{ csrf_input(request) }}
         <button type="submit" class="w-full py-2 rounded-lg bg-red-500 text-white text-sm font-semibold hover:bg-red-600 transition-colors">Sí, cancelar</button>
       </form>
       <button onclick="document.getElementById('modal-cancel-plan').classList.add('hidden')" class="flex-1 py-2 rounded-lg border border-slate-200 text-slate-600 text-sm font-semibold hover:bg-slate-50">Volver</button>

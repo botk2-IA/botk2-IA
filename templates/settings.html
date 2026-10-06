@@ -12,7 +12,7 @@
 {% endif %}
 
 <div class="max-w-2xl space-y-6">
-  <form method="post" action="/settings" class="space-y-6">
+  <form method="post" action="/settings" class="space-y-6">{{ csrf_input(request) }}
 
     <!-- Datos de la clínica -->
     <div class="card">
@@ -42,7 +42,7 @@
   </form>
 
   <!-- WhatsApp / Bot -->
-  <form method="post" action="/settings" id="form-wa">
+  <form method="post" action="/settings" id="form-wa">{{ csrf_input(request) }}
     <input type="hidden" name="name" value="{{ clinic.name }}"/>
     <input type="hidden" name="phone" value="{{ clinic.phone or '' }}"/>
     <input type="hidden" name="address" value="{{ clinic.address or '' }}"/>

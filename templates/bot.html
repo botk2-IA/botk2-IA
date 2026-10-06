@@ -158,7 +158,7 @@ async function sendMessage() {
   try {
     const res = await fetch('/bot/chat', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN},
       body: JSON.stringify({message: text})
     });
     const data = await res.json();
@@ -219,7 +219,7 @@ function resetChat() {
   // Reset bot session via sending a special message
   fetch('/bot/chat', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: {'Content-Type': 'application/json', 'X-CSRF-Token': CSRF_TOKEN},
     body: JSON.stringify({message: '__reset__'})
   });
   const container = document.getElementById('chat-messages');

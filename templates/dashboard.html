@@ -126,13 +126,13 @@
         </span>
         <div class="flex gap-1 flex-shrink-0">
           {% if appt.status == 'pending' %}
-          <form method="post" action="/appointments/{{ appt.id }}/status" style="display:inline">
+          <form method="post" action="/appointments/{{ appt.id }}/status" style="display:inline">{{ csrf_input(request) }}
             <input type="hidden" name="new_status" value="confirmed"/>
             <button type="submit" title="Confirmar" class="bg-green-100 text-green-700 text-xs font-bold px-2 py-1 rounded hover:bg-green-200 transition-colors">✓</button>
           </form>
           {% endif %}
           {% if appt.status not in ['cancelled', 'completed'] %}
-          <form method="post" action="/appointments/{{ appt.id }}/status" style="display:inline">
+          <form method="post" action="/appointments/{{ appt.id }}/status" style="display:inline">{{ csrf_input(request) }}
             <input type="hidden" name="new_status" value="cancelled"/>
             <button type="submit" title="Cancelar" class="bg-red-100 text-red-700 text-xs font-bold px-2 py-1 rounded hover:bg-red-200 transition-colors">✗</button>
           </form>
@@ -209,7 +209,7 @@
       <h3 class="font-bold text-slate-800">Nuevo turno</h3>
       <button onclick="document.getElementById('modal-appt').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
     </div>
-    <form method="post" action="/appointments/new" class="px-6 py-5 space-y-4" onsubmit="return validateDashPatient()">
+    <form method="post" action="/appointments/new" class="px-6 py-5 space-y-4" onsubmit="return validateDashPatient()">{{ csrf_input(request) }}
       <input type="hidden" name="redirect_to" value="/dashboard"/>
       <div>
         <label class="form-label">Paciente *</label>

@@ -32,6 +32,11 @@
   </div>
   <div class="flex items-center gap-4">
     <span class="text-slate-400 text-sm hidden sm:block">{{ today }}</span>
+    <a href="/admin/backup"
+       class="text-sm bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg transition-colors"
+       title="Descarga todos los datos. Guardalo en un lugar privado.">
+      Descargar backup
+    </a>
     <a href="/admin/logout"
        class="text-sm bg-slate-700 hover:bg-slate-600 px-3 py-1.5 rounded-lg transition-colors">
       Cerrar sesión
@@ -130,7 +135,7 @@
 
             <!-- Plan badge + selector -->
             <td class="px-4 py-3.5">
-              <form method="POST" action="/admin/clinics/{{ row.clinic.id }}/plan" class="flex items-center gap-2">
+              <form method="POST" action="/admin/clinics/{{ row.clinic.id }}/plan" class="flex items-center gap-2">{{ csrf_input(request) }}
                 <select name="plan" onchange="this.form.submit()"
                   class="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500">
                   {% for p in ["free", "starter", "pro", "clinica"] %}
@@ -183,7 +188,7 @@
                   👁 Ver
                 </a>
                 <!-- Activar / Desactivar -->
-                <form method="POST" action="/admin/clinics/{{ row.clinic.id }}/toggle">
+                <form method="POST" action="/admin/clinics/{{ row.clinic.id }}/toggle">{{ csrf_input(request) }}
                   <button type="submit" title="{{ 'Desactivar' if row.clinic.active else 'Activar' }}"
                     class="{{ 'bg-red-50 hover:bg-red-100 text-red-600' if row.clinic.active else 'bg-green-50 hover:bg-green-100 text-green-600' }} font-medium text-xs px-2.5 py-1.5 rounded-lg transition-colors">
                     {{ '⏸ Desactivar' if row.clinic.active else '▶ Activar' }}

@@ -10,8 +10,13 @@
     <div class="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-5">
       <span class="text-4xl">😕</span>
     </div>
+    {% if reason == "unavailable" %}
+    <h2 class="text-2xl font-bold text-slate-800 mb-2">Pago no disponible</h2>
+    <p class="text-slate-500 mb-8">No pudimos iniciar el pago con este medio. No se realizó ningún cobro; probá con otro medio o escribinos.</p>
+    {% else %}
     <h2 class="text-2xl font-bold text-slate-800 mb-2">Pago cancelado</h2>
     <p class="text-slate-500 mb-8">No se realizó ningún cobro. Podés intentarlo de nuevo cuando quieras.</p>
+    {% endif %}
 
     <div class="flex flex-col gap-3">
       <a href="/settings" class="btn-primary w-full py-3 text-base block text-center">

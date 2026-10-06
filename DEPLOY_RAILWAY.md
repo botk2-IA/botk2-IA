@@ -29,7 +29,9 @@ En Railway → tu servicio → "Variables", agregá:
 | Variable            | Valor                                      |
 |---------------------|--------------------------------------------|
 | `SECRET_KEY`        | (generá con: `python -c "import secrets; print(secrets.token_hex(32))"`) |
-| `ADMIN_PASSWORD_HASH` | (SHA-256 de tu contraseña admin) |
+| `ADMIN_PASSWORD_HASH` | (SHA-256 de tu contraseña admin; sin esta variable el panel `/admin` queda deshabilitado) |
+| `APP_URL`           | La URL pública con `https://` (activa las cookies seguras) |
+| `WHATSAPP_APP_SECRET` | App Secret de tu app de Meta (valida la firma de los mensajes entrantes) |
 
 Para generar el hash de la contraseña admin:
 ```python
@@ -53,3 +55,22 @@ Podés conectar `app.botk2-ia.com` o similar.
 ## Notas
 - La DB se migra automáticamente al iniciar (SQLAlchemy crea las tablas)
 - Para cargar datos de demo en Railway, corré: `python seed.py` desde la consola de Railway
+
+## Copias de seguridad
+Hay tres formas, y conviene tener al menos dos:
+
+1. **Backups de Railway:** en el servicio PostgreSQL → pestaña "Backups", activá la copia diaria (disponible según tu plan de Railway).
+2. **Copia automática diaria a un bucket propio:** cargá las variables `BACKUP_S3_BUCKET`, `BACKUP_S3_ACCESS_KEY` y `BACKUP_S3_SECRET_KEY` (y `BACKUP_S3_ENDPOINT` si usás Cloudflare R2 o Backblaze B2). La app sube una copia todos los días a las 3:30 AM en la carpeta `backups/`. El bucket tiene que ser privado; configurá en el bucket cuántos días conservar.
+3. **Descarga manual:** en el panel `/admin`, botón "Descargar backup".
+
+Para restaurar una copia en una base **vacía**:
+```bash
+python backup.py restore botk2ia-backup-AAAAMMDD-HHMM.json.gz
+```
+
+El archivo contiene datos de salud de pacientes y credenciales: no lo mandes por email ni lo dejes en carpetas compartidas.
+
+## Planes y pagos
+- Cada pago acreditado activa el plan por 30 días; un pago del mismo plan antes del vencimiento suma 30 días más.
+- Al vencer, la clínica pasa sola al plan Free (se revisa cada hora) y recibe un email de aviso 3 días antes.
+- Un plan asignado a mano desde `/admin` no tiene vencimiento.

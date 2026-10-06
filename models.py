@@ -2,7 +2,7 @@
 Botk2-IA — Modelos de base de datos (SQLAlchemy)
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -19,6 +19,7 @@ class Clinic(Base):
     address    = Column(String(300), default="")
     whatsapp   = Column(String(50), default="")
     plan             = Column(String(50), default="free")   # free | starter | pro | clinica
+    plan_expires_at  = Column(DateTime, nullable=True)      # UTC; None = sin vencimiento (free o asignado por admin)
     active           = Column(Boolean, default=True)
     wa_phone_id      = Column(String(100), default="")   # WhatsApp Phone ID por clínica
     wa_token         = Column(Text, default="")           # WhatsApp Token por clínica
@@ -89,3 +90,16 @@ class Appointment(Base):
     clinic       = relationship("Clinic",       back_populates="appointments")
     patient      = relationship("Patient",      back_populates="appointments")
     professional = relationship("Professional", back_populates="appointments")
+
+
+class Payment(Base):
+    """Pagos acreditados. Cada pago suma un período al plan y se registra una sola vez."""
+    __tablename__ = "payments"
+    __table_args__ = (UniqueConstraint("provider", "external_id", name="uq_payment_provider_external"),)
+
+    id          = Column(Integer, primary_key=True, index=True)
+    clinic_id   = Column(Integer, ForeignKey("clinics.id"), nullable=False)
+    provider    = Column(String(30), nullable=False)    # mercadopago | stripe
+    external_id = Column(String(200), nullable=False)   # id del pago en el proveedor
+    plan        = Column(String(50), nullable=False)
+    created_at  = Column(DateTime(timezone=True), server_default=func.now())

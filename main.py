@@ -19,6 +19,8 @@ import models
 import database
 import auth as auth_module
 import reminders as reminders_module
+import csrf as csrf_module
+import backup as backup_module
 from apscheduler.schedulers.background import BackgroundScheduler
 
 # ── Inicialización ────────────────────────────────────────────────────────────
@@ -36,9 +38,14 @@ def _run_migration():
         "ALTER TABLE professionals ADD COLUMN IF NOT EXISTS work_end VARCHAR(10) DEFAULT '18:00'",
         "ALTER TABLE appointments ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT ''",
         "ALTER TABLE patients ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT ''",
+        "ALTER TABLE clinics ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMP",
     ]
+    is_sqlite = database.engine.dialect.name == "sqlite"
     with database.engine.connect() as conn:
         for sql in migrations:
+            if is_sqlite:
+                # SQLite no entiende IF NOT EXISTS; si la columna ya existe, falla y se saltea
+                sql = sql.replace("IF NOT EXISTS ", "")
             try:
                 conn.execute(_sql_text(sql))
                 conn.commit()
@@ -54,14 +61,23 @@ async def _lifespan(app: FastAPI):
     # Recordatorio diario a las 9:00 AM hora Argentina
     _scheduler.add_job(reminders_module.send_reminders, "cron", hour=9, minute=0, id="daily_reminders")
     _scheduler.add_job(reminders_module.auto_complete_past_appointments, "cron", hour=23, minute=59, id="auto_complete")
+    # Planes pagos: baja a Free al vencer y aviso por email unos días antes
+    _expire_plans()
+    _scheduler.add_job(_expire_plans, "interval", hours=1, id="expire_plans")
+    _scheduler.add_job(_notify_expiring_plans, "cron", hour=10, minute=0, id="notify_expiring_plans")
+    # Copia de seguridad diaria (solo si hay bucket configurado)
+    _scheduler.add_job(backup_module.scheduled_backup, "cron", hour=3, minute=30, id="daily_backup")
     _scheduler.start()
     print("[Scheduler] Recordatorios activos (9:00 AM) + AutoComplete (23:59)")
     yield
     _scheduler.shutdown(wait=False)
 
 app = FastAPI(title="Botk2-IA", version="1.0.0", lifespan=_lifespan)
+app.add_middleware(csrf_module.CSRFMiddleware)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+templates.env.globals["csrf_input"] = csrf_module.csrf_input
+templates.env.globals["csrf_token"] = csrf_module.csrf_token
 
 
 
@@ -148,7 +164,8 @@ def register(
 
     token = auth_module.create_access_token({"sub": str(clinic.id)})
     response = RedirectResponse("/onboarding", status_code=302)
-    response.set_cookie("access_token", token, httponly=True, max_age=60*60*24*7)
+    response.set_cookie("access_token", token, httponly=True, max_age=60*60*24*7,
+                        secure=auth_module.COOKIE_SECURE, samesite="lax")
     return response
 
 
@@ -164,16 +181,26 @@ def login(
     password: str = Form(...),
     db: Session = Depends(database.get_db),
 ):
+    limit_key = f"login:{auth_module.client_ip(request)}"
+    if auth_module.login_blocked(limit_key):
+        return templates.TemplateResponse("login.html", {
+            "request": request,
+            "error": "Demasiados intentos. Probá de nuevo en 15 minutos."
+        }, status_code=429)
+
     clinic = db.query(models.Clinic).filter(models.Clinic.email == email).first()
     if not clinic or not auth_module.verify_password(password, clinic.password):
+        auth_module.register_login_failure(limit_key)
         return templates.TemplateResponse("login.html", {
             "request": request,
             "error": "Email o contraseña incorrectos."
         })
 
+    auth_module.clear_login_failures(limit_key)
     token = auth_module.create_access_token({"sub": str(clinic.id)})
     response = RedirectResponse("/dashboard", status_code=302)
-    response.set_cookie("access_token", token, httponly=True, max_age=60*60*24*7)
+    response.set_cookie("access_token", token, httponly=True, max_age=60*60*24*7,
+                        secure=auth_module.COOKIE_SECURE, samesite="lax")
     return response
 
 
@@ -1016,28 +1043,6 @@ def send_reminder(
     return RedirectResponse("/reminders", status_code=302)
 
 
-@app.post("/reminders/send-all")
-def send_all_reminders(
-    db: Session = Depends(database.get_db),
-    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
-):
-    tomorrow = (date.today() + timedelta(days=1)).isoformat()
-    appointments = (
-        db.query(models.Appointment)
-        .filter(
-            models.Appointment.clinic_id == clinic.id,
-            models.Appointment.date == tomorrow,
-            models.Appointment.status != "cancelled",
-            models.Appointment.reminder_sent == False,
-        )
-        .all()
-    )
-    for appt in appointments:
-        appt.reminder_sent = True
-    db.commit()
-    return RedirectResponse("/reminders", status_code=302)
-
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # CONFIGURACIÓN
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1279,9 +1284,18 @@ async def whatsapp_webhook(
     """
     Webhook que recibe mensajes de WhatsApp vía Meta Cloud API.
     """
-    import httpx, os as _os
-    data = await request.json()
+    import httpx, os as _os, json as _json, hmac as _hmac
+    raw = await request.body()
+
+    # Firma de Meta (X-Hub-Signature-256): prueba que el mensaje viene de WhatsApp
+    if WHATSAPP_APP_SECRET:
+        signature = request.headers.get("x-hub-signature-256", "")
+        expected = "sha256=" + _hmac.new(WHATSAPP_APP_SECRET.encode(), raw, hashlib.sha256).hexdigest()
+        if not _hmac.compare_digest(signature, expected):
+            return Response(content="Forbidden", status_code=403)
+
     try:
+        data = _json.loads(raw)
         entry = data["entry"][0]
         changes = entry["changes"][0]["value"]
         messages = changes.get("messages")
@@ -1290,18 +1304,24 @@ async def whatsapp_webhook(
         msg = messages[0]
         phone = msg["from"]
         body = msg.get("text", {}).get("body", "").strip()
-    except (KeyError, IndexError):
+        to_phone_id = str((changes.get("metadata") or {}).get("phone_number_id", ""))
+    except (ValueError, KeyError, IndexError, TypeError, AttributeError):
         return {"status": "ok"}
 
     clinic_obj = db.query(models.Clinic).filter_by(id=clinic_id, active=True).first()
     if not clinic_obj:
         return {"status": "ok"}
 
-    reply = chatbot.process_message(phone, body, db, clinic_id)
-
     # Usar credenciales por clínica, con fallback a env vars globales
     wa_token    = clinic_obj.wa_token    or _os.environ.get("WHATSAPP_TOKEN", "")
     wa_phone_id = clinic_obj.wa_phone_id or _os.environ.get("WHATSAPP_PHONE_ID", "")
+
+    # El mensaje tiene que haber llegado al número de WhatsApp de esta clínica
+    if wa_phone_id and to_phone_id != str(wa_phone_id):
+        return {"status": "ok"}
+
+    reply = chatbot.process_message(phone, body, db, clinic_id)
+
     if wa_token and wa_phone_id:
         url = f"https://graph.facebook.com/v21.0/{wa_phone_id}/messages"
         headers = {"Authorization": f"Bearer {wa_token}", "Content-Type": "application/json"}
@@ -1309,7 +1329,7 @@ async def whatsapp_webhook(
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.post(url, json=payload, headers=headers, timeout=10)
-                print(f"[WhatsApp] Enviando a {phone} | Status: {resp.status_code} | Body: {resp.text}")
+                print(f"[WhatsApp] Respuesta enviada | Clínica {clinic_id} | Status: {resp.status_code}")
         except Exception as e:
             print(f"[WhatsApp] Error enviando mensaje: {e}")
 
@@ -1352,17 +1372,44 @@ async def chat_sim_send(
 import os
 import hashlib
 
-WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "botk2ia_webhook_secret")
+import hmac
 
-ADMIN_PASSWORD_HASH = os.environ.get(
-    "ADMIN_PASSWORD_HASH",
-    # Hash por defecto: "botk2admin2024" — cambiarlo en producción via env var
-    hashlib.sha256("botk2admin2024".encode()).hexdigest()
-)
+WHATSAPP_VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "botk2ia_webhook_secret")
+# App Secret de la app de Meta: con esto se valida la firma de cada mensaje entrante
+WHATSAPP_APP_SECRET = os.environ.get("WHATSAPP_APP_SECRET", "")
+if not WHATSAPP_APP_SECRET:
+    print("[WhatsApp] ADVERTENCIA: WHATSAPP_APP_SECRET no configurada, el webhook no valida la firma de Meta")
+
+# SHA-256 de la contraseña admin. Sin esta variable el panel /admin queda deshabilitado.
+ADMIN_PASSWORD_HASH = os.environ.get("ADMIN_PASSWORD_HASH", "").strip().lower()
+if not ADMIN_PASSWORD_HASH:
+    print("[Admin] ADVERTENCIA: ADMIN_PASSWORD_HASH no configurada, panel admin deshabilitado")
+
+ADMIN_SESSION_HOURS = 8
+
+
+def _admin_key() -> str:
+    """Ata la sesión admin a la contraseña actual: si cambia, las sesiones viejas caen."""
+    return hashlib.sha256(f"admin:{ADMIN_PASSWORD_HASH}".encode()).hexdigest()[:16]
+
+
+def _create_admin_token() -> str:
+    return auth_module.create_access_token(
+        {"role": "admin", "k": _admin_key()},
+        expires_delta=timedelta(hours=ADMIN_SESSION_HOURS),
+    )
+
 
 def _check_admin(request: Request) -> bool:
-    """Verifica si la cookie de admin es válida."""
-    return request.cookies.get("admin_token") == ADMIN_PASSWORD_HASH
+    """Verifica si la cookie de admin es una sesión firmada y vigente."""
+    token = request.cookies.get("admin_token")
+    if not token or not ADMIN_PASSWORD_HASH:
+        return False
+    try:
+        payload = auth_module.jwt.decode(token, auth_module.SECRET_KEY, algorithms=[auth_module.ALGORITHM])
+    except auth_module.JWTError:
+        return False
+    return payload.get("role") == "admin" and payload.get("k") == _admin_key()
 
 
 def _require_admin(request: Request):
@@ -1400,14 +1447,26 @@ def admin_login_page(request: Request):
 
 @app.post("/admin/login", response_class=HTMLResponse)
 def admin_login(request: Request, password: str = Form(...)):
+    limit_key = f"admin:{auth_module.client_ip(request)}"
+    if auth_module.login_blocked(limit_key):
+        return templates.TemplateResponse("admin_login.html", {
+            "request": request,
+            "error": "Demasiados intentos. Probá de nuevo en 15 minutos."
+        }, status_code=429)
+
     hashed = hashlib.sha256(password.encode()).hexdigest()
-    if hashed != ADMIN_PASSWORD_HASH:
+    if not ADMIN_PASSWORD_HASH or not hmac.compare_digest(hashed, ADMIN_PASSWORD_HASH):
+        auth_module.register_login_failure(limit_key)
         return templates.TemplateResponse("admin_login.html", {
             "request": request,
             "error": "Contraseña incorrecta."
         })
+
+    auth_module.clear_login_failures(limit_key)
     response = RedirectResponse("/admin", status_code=302)
-    response.set_cookie("admin_token", hashed, httponly=True, max_age=60*60*8)  # 8 horas
+    response.set_cookie("admin_token", _create_admin_token(), httponly=True,
+                        max_age=60*60*ADMIN_SESSION_HOURS,
+                        secure=auth_module.COOKIE_SECURE, samesite="lax")
     return response
 
 
@@ -1467,7 +1526,9 @@ def admin_change_plan(
         return RedirectResponse("/admin/login", status_code=302)
     clinic = db.query(models.Clinic).filter_by(id=clinic_id).first()
     if clinic and plan in ("free", "starter", "pro", "clinica"):
+        # Plan asignado a mano por el admin: queda sin vencimiento
         clinic.plan = plan
+        clinic.plan_expires_at = None
         db.commit()
     return RedirectResponse("/admin", status_code=302)
 
@@ -1487,6 +1548,21 @@ def admin_toggle_clinic(
     return RedirectResponse("/admin", status_code=302)
 
 
+@app.get("/admin/backup")
+def admin_backup(request: Request):
+    """Descarga una copia completa de la base (datos sensibles: guardar en lugar seguro)."""
+    if not _check_admin(request):
+        return RedirectResponse("/admin/login", status_code=302)
+    return Response(
+        content=backup_module.export_bytes(),
+        media_type="application/gzip",
+        headers={
+            "Content-Disposition": f'attachment; filename="{backup_module.backup_filename()}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
 @app.get("/admin/login-as/{clinic_id}")
 def admin_login_as(
     clinic_id: int,
@@ -1501,7 +1577,8 @@ def admin_login_as(
         return RedirectResponse("/admin", status_code=302)
     token = auth_module.create_access_token({"sub": str(clinic.id)})
     response = RedirectResponse("/dashboard", status_code=302)
-    response.set_cookie("access_token", token, httponly=True, max_age=60*60*2)  # 2 horas
+    response.set_cookie("access_token", token, httponly=True, max_age=60*60*2,  # 2 horas
+                        secure=auth_module.COOKIE_SECURE, samesite="lax")
     return response
 
 
@@ -1519,6 +1596,80 @@ PLAN_LIMITS = {
     "pro":     {"professionals": 5, "monthly_appointments": None},
     "clinica": {"professionals": None, "monthly_appointments": None},
 }
+
+# Cada pago acreditado suma un período al plan; al vencer, la clínica vuelve a Free
+PLAN_PERIOD_DAYS      = 30
+PLAN_EXPIRY_WARN_DAYS = 3
+
+
+def _activate_plan(db: Session, clinic: models.Clinic, plan: str, provider: str, external_id: str) -> bool:
+    """
+    Registra un pago y suma un período al plan. Devuelve False si ese pago ya
+    estaba registrado (el webhook y la página de retorno avisan del mismo pago).
+    """
+    from sqlalchemy.exc import IntegrityError
+    already = db.query(models.Payment).filter_by(provider=provider, external_id=external_id).first()
+    if already:
+        return False
+
+    now = datetime.utcnow()
+    renewing = clinic.plan == plan and clinic.plan_expires_at and clinic.plan_expires_at > now
+    start = clinic.plan_expires_at if renewing else now
+    clinic.plan = plan
+    clinic.plan_expires_at = start + timedelta(days=PLAN_PERIOD_DAYS)
+    db.add(models.Payment(clinic_id=clinic.id, provider=provider, external_id=external_id, plan=plan))
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return False
+    print(f"[Pagos] Clínica {clinic.id} → plan {plan} hasta {clinic.plan_expires_at:%Y-%m-%d} ({provider})")
+    return True
+
+
+def _expire_plans() -> None:
+    """Pasa a Free las clínicas con el plan vencido."""
+    db = database.SessionLocal()
+    try:
+        expired = db.query(models.Clinic).filter(
+            models.Clinic.plan != "free",
+            models.Clinic.plan_expires_at.isnot(None),
+            models.Clinic.plan_expires_at < datetime.utcnow(),
+        ).all()
+        for clinic in expired:
+            print(f"[Pagos] Plan {clinic.plan} vencido → clínica {clinic.id} pasa a Free")
+            clinic.plan = "free"
+            clinic.plan_expires_at = None
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[Pagos] Error venciendo planes: {e}")
+    finally:
+        db.close()
+
+
+def _notify_expiring_plans() -> None:
+    """Avisa por email a las clínicas cuyo plan vence en unos días (corre una vez por día)."""
+    import emails as emails_module
+    db = database.SessionLocal()
+    try:
+        window_end   = datetime.utcnow() + timedelta(days=PLAN_EXPIRY_WARN_DAYS)
+        window_start = window_end - timedelta(days=1)
+        expiring = db.query(models.Clinic).filter(
+            models.Clinic.plan != "free",
+            models.Clinic.active == True,
+            models.Clinic.plan_expires_at > window_start,
+            models.Clinic.plan_expires_at <= window_end,
+        ).all()
+        for clinic in expiring:
+            emails_module.send_plan_expiring(
+                clinic.name, clinic.email, clinic.plan, clinic.plan_expires_at.strftime("%d/%m/%Y")
+            )
+    except Exception as e:
+        print(f"[Pagos] Error avisando vencimientos: {e}")
+    finally:
+        db.close()
+
 
 def _check_professional_limit(clinic, db) -> bool:
     plan = clinic.plan or "free"
@@ -1542,19 +1693,6 @@ def _check_appointment_limit(clinic, db) -> bool:
         models.Appointment.status != "cancelled",
     ).count()
     return count < limit
-
-
-@app.get("/pricing", response_class=HTMLResponse)
-def pricing_page(
-    request: Request,
-    db: Session = Depends(database.get_db),
-    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
-):
-    return templates.TemplateResponse("pricing.html", {
-        "request": request,
-        "clinic":  clinic,
-        "plans":   pay_module.PLANS,
-    })
 
 
 @app.get("/pricing", response_class=HTMLResponse)
@@ -1597,6 +1735,7 @@ def subscription_cancel(
     clinic: models.Clinic = Depends(auth_module.get_current_clinic),
 ):
     clinic.plan = "free"
+    clinic.plan_expires_at = None
     db.commit()
     return RedirectResponse("/pricing?cancelled=1", status_code=302)
 
@@ -1614,11 +1753,8 @@ def subscribe_mercadopago(
     checkout_url = pay_module.create_mp_preference(plan, clinic.id, clinic.email)
 
     if not checkout_url:
-        # MP no configurado aún — en demo vamos directo al éxito
-        return RedirectResponse(
-            f"/payment/success?plan={plan}&method=mercadopago&demo=1",
-            status_code=302,
-        )
+        # MP no configurado o con error: no se activa ningún plan sin pago
+        return RedirectResponse("/payment/cancel?reason=unavailable", status_code=302)
     return RedirectResponse(checkout_url, status_code=302)
 
 
@@ -1635,11 +1771,8 @@ def subscribe_stripe(
     checkout_url = pay_module.create_stripe_session(plan, clinic.id, clinic.email)
 
     if not checkout_url:
-        # Stripe no configurado aún — en demo vamos directo al éxito
-        return RedirectResponse(
-            f"/payment/success?plan={plan}&method=stripe&demo=1",
-            status_code=302,
-        )
+        # Stripe no configurado o con error: no se activa ningún plan sin pago
+        return RedirectResponse("/payment/cancel?reason=unavailable", status_code=302)
     return RedirectResponse(checkout_url, status_code=302)
 
 
@@ -1649,14 +1782,25 @@ def payment_success(
     plan: str = "",
     method: str = "",
     status: str = "approved",
-    demo: str = "",
+    payment_id: str = "",
+    session_id: str = "",
     db: Session = Depends(database.get_db),
     clinic: models.Clinic = Depends(auth_module.get_current_clinic),
 ):
-    """Página de éxito — actualiza el plan de la clínica."""
-    if plan in VALID_PLANS and status != "pending":
-        clinic.plan = plan
-        db.commit()
+    """Página de éxito — activa el plan solo si el proveedor confirma el pago."""
+    result = None
+    if plan in VALID_PLANS:
+        if method == "stripe" and session_id:
+            result = pay_module.verify_stripe_session(session_id)
+        elif method == "mercadopago" and payment_id:
+            result = pay_module.verify_mp_payment(payment_id)
+
+    if result and result.get("clinic_id") == clinic.id and result.get("plan") == plan:
+        _activate_plan(db, clinic, plan, method, result["payment_id"])
+        status = "approved"
+    else:
+        # Sin confirmación todavía: el webhook activa el plan cuando se acredite
+        status = "pending"
 
     plan_info = pay_module.PLANS.get(plan, {"name": plan.capitalize()})
     return templates.TemplateResponse("payment_success.html", {
@@ -1666,7 +1810,6 @@ def payment_success(
         "plan_name": plan_info["name"],
         "method":    method,
         "status":    status,
-        "is_demo":   bool(demo),
     })
 
 
@@ -1702,9 +1845,7 @@ async def webhook_mercadopago(request: Request, db: Session = Depends(database.g
     if result and result.get("status") == "approved":
         clinic = db.query(models.Clinic).filter_by(id=result["clinic_id"]).first()
         if clinic and result.get("plan") in VALID_PLANS:
-            clinic.plan = result["plan"]
-            db.commit()
-            print(f"[MP Webhook] Clínica {clinic.id} → plan {result['plan']}")
+            _activate_plan(db, clinic, result["plan"], "mercadopago", result["payment_id"])
 
     return JSONResponse({"ok": True})
 
@@ -1723,7 +1864,6 @@ async def webhook_stripe(request: Request, db: Session = Depends(database.get_db
     if result and result.get("status") == "paid":
         clinic = db.query(models.Clinic).filter_by(id=result["clinic_id"]).first()
         if clinic and result.get("plan") in VALID_PLANS:
-            clinic.plan = result["plan"]
-            db.commit()
+            _activate_plan(db, clinic, result["plan"], "stripe", result["payment_id"])
 
     return JSONResponse({"ok": True})
