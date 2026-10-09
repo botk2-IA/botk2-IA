@@ -4,23 +4,26 @@
 {% block page_title %}Agenda{% endblock %}
 {% block page_subtitle %}Gestión de turnos{% endblock %}
 
+{# Filtros activos, para que no se pierdan al cambiar de vista o de fecha #}
+{% set filters_qs = "&status_filter=" ~ (status_filter | urlencode) ~ "&professional_filter=" ~ (professional_filter | urlencode) ~ "&specialty_filter=" ~ (specialty_filter | urlencode) %}
+
 {% block page_actions %}
 <div class="flex items-center gap-2">
   <div class="flex border border-slate-200 rounded-lg overflow-hidden bg-white">
-    <a href="/appointments?date_filter={{ date_filter }}&status_filter={{ status_filter }}&professional_filter={{ professional_filter }}&specialty_filter={{ specialty_filter }}&view=day"
+    <a href="/appointments?date_filter={{ date_filter }}{{ filters_qs }}&view=day"
        class="px-4 py-2 text-sm font-semibold transition-colors {% if view != 'week' and view != 'month' %}bg-blue-600 text-white{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
       📅 Día
     </a>
-    <a href="/appointments?date_filter={{ date_filter }}&view=week"
+    <a href="/appointments?date_filter={{ date_filter }}{{ filters_qs }}&view=week"
        class="px-4 py-2 text-sm font-semibold border-l border-slate-200 transition-colors {% if view == 'week' %}bg-blue-600 text-white{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
       Semana
     </a>
-    <a href="/appointments?date_filter={{ date_filter }}&view=month"
+    <a href="/appointments?date_filter={{ date_filter }}{{ filters_qs }}&view=month"
        class="px-4 py-2 text-sm font-semibold border-l border-slate-200 transition-colors {% if view == 'month' %}bg-blue-600 text-white{% else %}text-slate-600 hover:bg-slate-50{% endif %}">
       Mes
     </a>
   </div>
-  <a href="/appointments/export?date_from={{ date_filter }}&date_to={{ date_filter }}&status_filter={{ status_filter }}&professional_filter={{ professional_filter }}"
+  <a href="/appointments/export?date_from={{ range_from }}&date_to={{ range_to }}&status_filter={{ status_filter }}&professional_filter={{ professional_filter }}"
      class="btn-outline text-sm px-3 py-2">⬇ CSV</a>
   <button onclick="document.getElementById('modal-new').classList.remove('hidden')" class="btn-primary">+ Nuevo turno</button>
 </div>
@@ -43,15 +46,17 @@
   {% endif %}
 </div>
 {% endif %}
+{% set periodo = {"week": "Semana", "month": "Mes"}.get(view, "Día") %}
 <form method="get" class="card mb-5 flex flex-wrap items-center gap-3">
-  <!-- Navegación de fecha -->
+  <input type="hidden" name="view" value="{{ view }}"/>
+  <!-- Navegación de fecha: las flechas avanzan un día, una semana o un mes según la vista -->
   <div class="flex items-center gap-2">
-    <button type="button" onclick="changeDate(-1)" class="btn-outline px-3 py-1.5">‹</button>
-    <input type="date" name="date_filter" value="{{ date_filter }}" id="date-input"
+    <button type="button" onclick="changeDate(-1)" class="btn-outline px-3 py-1.5" title="{{ periodo }} anterior">‹ {% if view != 'day' %}<span class="text-xs">{{ periodo }} anterior</span>{% endif %}</button>
+    <input type="date" name="date_filter" value="{{ date_filter }}" id="date-input" onchange="this.form.submit()"
       class="border border-slate-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"/>
-    <button type="button" onclick="changeDate(1)" class="btn-outline px-3 py-1.5">›</button>
+    <button type="button" onclick="changeDate(1)" class="btn-outline px-3 py-1.5" title="{{ periodo }} siguiente">{% if view != 'day' %}<span class="text-xs">{{ periodo }} siguiente</span>{% endif %} ›</button>
     {% if date_filter != today %}
-    <a href="/appointments" class="text-xs text-blue-600 hover:underline ml-1">Hoy</a>
+    <a href="/appointments?view={{ view }}{{ filters_qs }}" class="text-xs text-blue-600 hover:underline ml-1">Hoy</a>
     {% endif %}
   </div>
 
@@ -98,15 +103,16 @@
 
   <button type="submit" class="btn-primary text-sm">Filtrar</button>
   {% if status_filter or specialty_filter or professional_filter %}
-  <a href="/appointments?date_filter={{ date_filter }}" class="text-xs text-slate-500 hover:text-slate-700 underline">Limpiar filtros</a>
+  <a href="/appointments?date_filter={{ date_filter }}&view={{ view }}" class="text-xs text-slate-500 hover:text-slate-700 underline">Limpiar filtros</a>
   {% endif %}
 </form>
 
-{% macro appt_table(appt_list) %}
+{% macro appt_table(appt_list, show_date=false) %}
 <div class="overflow-x-auto">
 <table class="w-full text-sm">
   <thead class="border-b border-slate-100">
     <tr>
+      {% if show_date %}<th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Fecha</th>{% endif %}
       <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Hora</th>
       <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Paciente</th>
       <th class="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Profesional</th>
@@ -119,6 +125,11 @@
   <tbody class="divide-y divide-slate-50">
     {% for appt in appt_list %}
     <tr class="hover:bg-slate-50 transition-colors">
+      {% if show_date %}
+      <td class="px-4 py-3 text-slate-700 text-sm whitespace-nowrap">
+        <a href="/appointments?date_filter={{ appt.date }}&view=day" class="hover:text-blue-600">{{ appt.date.split('-') | reverse | join('/') }}</a>
+      </td>
+      {% endif %}
       <td class="px-4 py-3 font-bold text-slate-800">{{ appt.time }}</td>
       <td class="px-4 py-3">
         <a href="/patients/{{ appt.patient_id }}" class="font-semibold text-slate-800 hover:text-blue-600 text-sm">
@@ -192,6 +203,23 @@
 </div>
 {% endmacro %}
 
+{# Listado detallado de la semana o el mes, con los filtros aplicados #}
+{% macro period_list() %}
+<div class="card p-0 overflow-hidden mt-5">
+  <div class="px-5 py-3 border-b border-slate-100 bg-slate-50">
+    <p class="text-sm font-semibold text-slate-700">
+      Listado {{ "de la semana" if view == "week" else "del mes" }} — {{ appointments | length }} turno{% if appointments | length != 1 %}s{% endif %}
+      {% if status_filter or specialty_filter or professional_filter %}<span class="font-normal text-slate-500">(con los filtros aplicados)</span>{% endif %}
+    </p>
+  </div>
+  {% if appointments %}
+  {{ appt_table(appointments, show_date=true) }}
+  {% else %}
+  <p class="py-10 text-center text-slate-400 text-sm">No hay turnos {{ "en esta semana" if view == "week" else "en este mes" }}{% if status_filter or specialty_filter or professional_filter %} con esos filtros{% endif %}.</p>
+  {% endif %}
+</div>
+{% endmacro %}
+
 {% if view == 'day' %}
 <!-- ─── VISTA DÍA ─── -->
 <div class="card p-0 overflow-hidden">
@@ -232,7 +260,7 @@
           <td class="px-2 py-3 border-r border-slate-50 last:border-0" style="vertical-align:top;min-height:80px">
             {% if day.appts %}
               {% for appt in day.appts %}
-              <a href="/appointments?date_filter={{ day.date }}&view=day"
+              <a href="/appointments?date_filter={{ day.date }}{{ filters_qs }}&view=day"
                  class="block mb-2 px-2 py-1.5 rounded-lg text-xs hover:opacity-80 transition-opacity"
                  style="background:{% if appt.professional %}{{ appt.professional.color }}22{% else %}#eff6ff{% endif %}">
                 <p class="font-bold text-slate-800">{{ appt.patient.name.split()[0] if appt.patient else "—" }}</p>
@@ -249,6 +277,8 @@
     </table>
   </div>
 </div>
+
+{{ period_list() }}
 
 {% else %}
 <!-- ─── VISTA MES ─── -->
@@ -268,7 +298,7 @@
     <div class="grid grid-cols-7 gap-1 mb-1">
       {% for cell in week %}
       {% if cell %}
-      <a href="/appointments?date_filter={{ cell.date }}&view=day"
+      <a href="/appointments?date_filter={{ cell.date }}{{ filters_qs }}&view=day"
          class="min-h-16 rounded-lg p-2 border transition-colors cursor-pointer
                 {% if cell.is_today %}border-blue-400 bg-blue-50{% elif cell.appts %}border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50{% else %}border-slate-100 bg-white hover:bg-slate-50{% endif %}">
         <p class="text-sm font-bold {% if cell.is_today %}text-blue-600{% else %}text-slate-700{% endif %}">{{ cell.day }}</p>
@@ -290,6 +320,7 @@
     {% endfor %}
   </div>
 </div>
+{{ period_list() }}
 {% endif %}
 {% endblock %}
 
@@ -404,10 +435,20 @@
 
 {% block scripts %}
 <script>
+const AGENDA_VIEW = "{{ view }}";
+
+// Avanza o retrocede un día, una semana o un mes según la vista actual
 function changeDate(delta) {
   const input = document.getElementById('date-input');
   const d = new Date((input.value || new Date().toISOString().slice(0,10)) + 'T12:00:00');
-  d.setDate(d.getDate() + delta);
+  if (AGENDA_VIEW === 'month') {
+    d.setDate(1);
+    d.setMonth(d.getMonth() + delta);
+  } else if (AGENDA_VIEW === 'week') {
+    d.setDate(d.getDate() + 7 * delta);
+  } else {
+    d.setDate(d.getDate() + delta);
+  }
   input.value = d.toISOString().slice(0,10);
   input.form.submit();
 }

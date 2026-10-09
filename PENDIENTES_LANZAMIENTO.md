@@ -8,7 +8,7 @@ _Última actualización: 3 de junio de 2026_
 | Plan | Precio USD/mes | Para quién |
 |---|---|---|
 | **Starter** | USD 29 | 1 profesional, hasta 100 turnos/mes, bot WhatsApp incluido |
-| **Pro** | USD 49 | Hasta 5 profesionales, historial clínico, estadísticas |
+| **Pro** | USD 49 | Hasta 2 profesionales, historial clínico, estadísticas |
 | **Clínica** | USD 89 | Profesionales ilimitados, multi-especialidad, todo incluido |
 
 > **Diferencial clave:** WhatsApp bot incluido en todos los planes. La competencia (Medicloud) cobra ~$150.000 ARS/mes aparte por esto.

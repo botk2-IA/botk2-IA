@@ -671,6 +671,7 @@ def appointments_list(
             models.Appointment.date <= week_end.isoformat(),
         )
         range_label = f"{week_start.strftime('%d/%m')} – {week_end.strftime('%d/%m/%Y')}"
+        range_from, range_to = week_start.isoformat(), week_end.isoformat()
     elif view == "month":
         import calendar as _cal
         last_day = _cal.monthrange(base_date.year, base_date.month)[1]
@@ -682,14 +683,20 @@ def appointments_list(
         )
         MESES = ["","Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"]
         range_label = f"{MESES[base_date.month]} {base_date.year}"
+        range_from, range_to = month_start.isoformat(), month_end.isoformat()
     else:
+        view = "day"
         query = query.filter(models.Appointment.date == date_filter)
         range_label = date_filter
+        range_from = range_to = date_filter
 
     if status_filter:
         query = query.filter(models.Appointment.status == status_filter)
     if professional_filter:
-        query = query.filter(models.Appointment.professional_id == int(professional_filter))
+        try:
+            query = query.filter(models.Appointment.professional_id == int(professional_filter))
+        except ValueError:
+            professional_filter = ""
 
     appointments = query.order_by(models.Appointment.date, models.Appointment.time).all()
 
@@ -762,6 +769,8 @@ def appointments_list(
         "specialty_filter": specialty_filter,
         "view": view,
         "range_label": range_label,
+        "range_from": range_from,
+        "range_to": range_to,
         "today": date.today().isoformat(),
     })
 
@@ -1744,7 +1753,7 @@ VALID_PLANS = {"starter", "pro", "clinica"}
 PLAN_LIMITS = {
     "free":    {"professionals": 1, "monthly_appointments": 30},
     "starter": {"professionals": 1, "monthly_appointments": 100},
-    "pro":     {"professionals": 5, "monthly_appointments": None},
+    "pro":     {"professionals": 2, "monthly_appointments": None},
     "clinica": {"professionals": None, "monthly_appointments": None},
 }
 
