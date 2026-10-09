@@ -47,6 +47,20 @@
 <!-- ── Content ── -->
 <main class="max-w-7xl mx-auto px-4 sm:px-6 py-8">
 
+  {% if request.query_params.get('deleted') %}
+  <div class="mb-5 bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-800 font-medium">
+    ✅ Clínica borrada definitivamente junto con todos sus datos.
+  </div>
+  {% elif request.query_params.get('delete_error') == '1' %}
+  <div class="mb-5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-800 font-medium">
+    ⚠️ El nombre escrito no coincide con el de la clínica. No se borró nada.
+  </div>
+  {% elif request.query_params.get('delete_error') %}
+  <div class="mb-5 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-800 font-medium">
+    ❌ No se pudo borrar la clínica. No se modificó ningún dato; revisá los logs.
+  </div>
+  {% endif %}
+
   <!-- Global KPIs -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
 
@@ -194,6 +208,17 @@
                     {{ '⏸ Desactivar' if row.clinic.active else '▶ Activar' }}
                   </button>
                 </form>
+                <!-- Borrar definitivamente -->
+                <form method="POST" action="/admin/clinics/{{ row.clinic.id }}/delete"
+                      data-name="{{ row.clinic.name }}"
+                      data-summary="{{ row.patients }} pacientes, {{ row.appointments }} turnos y {{ row.professionals }} profesionales"
+                      onsubmit="return confirmDeleteClinic(this)">{{ csrf_input(request) }}
+                  <input type="hidden" name="confirm_name"/>
+                  <button type="submit" title="Borrar definitivamente"
+                    class="bg-red-600 hover:bg-red-700 text-white font-medium text-xs px-2.5 py-1.5 rounded-lg transition-colors">
+                    🗑 Borrar
+                  </button>
+                </form>
               </div>
             </td>
 
@@ -279,5 +304,18 @@
 
 </main>
 
+<script>
+function confirmDeleteClinic(form) {
+  const name = form.dataset.name;
+  const typed = prompt(
+    'Vas a BORRAR DEFINITIVAMENTE la clínica "' + name + '" con ' + form.dataset.summary + '.\n\n' +
+    'Esto no se puede deshacer. Si querés conservar una copia, cancelá y usá "Descargar backup" antes.\n\n' +
+    'Para confirmar, escribí el nombre exacto de la clínica:'
+  );
+  if (typed === null) return false;
+  form.querySelector('input[name="confirm_name"]').value = typed;
+  return true;
+}
+</script>
 </body>
 </html>

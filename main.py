@@ -1548,6 +1548,44 @@ def admin_toggle_clinic(
     return RedirectResponse("/admin", status_code=302)
 
 
+@app.post("/admin/clinics/{clinic_id}/delete")
+def admin_delete_clinic(
+    clinic_id: int,
+    request: Request,
+    confirm_name: str = Form(""),
+    db: Session = Depends(database.get_db),
+):
+    """Borra definitivamente una clínica y todos sus datos. No se puede deshacer."""
+    if not _check_admin(request):
+        return RedirectResponse("/admin/login", status_code=302)
+    clinic = db.query(models.Clinic).filter_by(id=clinic_id).first()
+    if not clinic:
+        return RedirectResponse("/admin", status_code=302)
+    # El admin tiene que escribir el nombre exacto de la clínica para confirmar
+    if confirm_name.strip().lower() != (clinic.name or "").strip().lower():
+        return RedirectResponse("/admin?delete_error=1", status_code=302)
+
+    try:
+        counts = {}
+        for label, model in (
+            ("turnos", models.Appointment),
+            ("pacientes", models.Patient),
+            ("profesionales", models.Professional),
+            ("pagos", models.Payment),
+        ):
+            counts[label] = db.query(model).filter_by(clinic_id=clinic_id).delete(synchronize_session=False)
+        db.delete(clinic)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"[Admin] Error borrando clínica {clinic_id}: {e}")
+        return RedirectResponse("/admin?delete_error=2", status_code=302)
+
+    detalle = ", ".join(f"{n} {label}" for label, n in counts.items())
+    print(f"[Admin] Clínica {clinic_id} borrada definitivamente ({detalle})")
+    return RedirectResponse("/admin?deleted=1", status_code=302)
+
+
 @app.get("/admin/backup")
 def admin_backup(request: Request):
     """Descarga una copia completa de la base (datos sensibles: guardar en lugar seguro)."""
