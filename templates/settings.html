@@ -101,6 +101,43 @@
     </div>
   </form>
 
+  <!-- Personalización del bot -->
+  <form method="post" action="/settings/bot" id="bot">{{ csrf_input(request) }}
+    <div class="card">
+      <h2 class="font-bold text-slate-800 mb-1">Personalizar el bot</h2>
+      <p class="text-xs text-slate-400 mb-4">Lo que escribas acá lo usa el bot de WhatsApp al hablar con tus pacientes. Todos los campos son opcionales.</p>
+      <div class="space-y-4">
+        <div>
+          <label class="form-label">Saludo inicial</label>
+          <textarea name="bot_welcome" rows="2" maxlength="500" class="form-input"
+            placeholder="👋 ¡Hola! Soy el asistente de {{ clinic.name }}.">{{ clinic.bot_welcome or '' }}</textarea>
+          <p class="text-xs text-slate-400 mt-1">Si lo dejás vacío se usa el saludo de ejemplo.</p>
+        </div>
+        <div>
+          <label class="form-label">Información y precios</label>
+          <textarea name="bot_info" rows="5" maxlength="1500" class="form-input"
+            placeholder="Ej: Consulta particular $25.000. Atendemos OSDE, Swiss Medical y PAMI. Se abona en efectivo o transferencia. Traer estudios previos.">{{ clinic.bot_info or '' }}</textarea>
+          <p class="text-xs text-slate-400 mt-1">Aparece como opción "Información y precios" en el menú del bot. El valor de la consulta de cada profesional se carga en Profesionales → Horario.</p>
+        </div>
+        <div>
+          <label class="form-label">Mensaje al confirmar un turno</label>
+          <textarea name="bot_confirm_note" rows="2" maxlength="500" class="form-input"
+            placeholder="Ej: Por favor llegá 10 minutos antes y traé tu DNI y credencial.">{{ clinic.bot_confirm_note or '' }}</textarea>
+        </div>
+        <div>
+          <label class="form-label">¿Con cuánta anticipación se pueden sacar turnos?</label>
+          <select name="bot_days_ahead" class="form-input">
+            {% for d in bot_days_options %}
+            <option value="{{ d }}" {% if d == bot_days_ahead %}selected{% endif %}>Próximos {{ d }} días</option>
+            {% endfor %}
+          </select>
+          <p class="text-xs text-slate-400 mt-1">El bot ofrece fechas dentro de este período, de a 8 por mensaje.</p>
+        </div>
+      </div>
+      <button type="submit" class="btn-primary w-full py-3 text-base mt-5">Guardar personalización</button>
+    </div>
+  </form>
+
   <!-- Plan -->
   <div class="card">
     <h2 class="font-bold text-slate-800 mb-1">Plan actual</h2>
@@ -120,7 +157,7 @@
         <p class="font-bold text-slate-800">Pro</p>
         <p class="text-2xl font-extrabold text-blue-600 mt-1">$49</p>
         <p class="text-xs text-slate-500">USD/mes</p>
-        <p class="text-xs text-slate-400 mt-2">Hasta 3 profesionales</p>
+        <p class="text-xs text-slate-400 mt-2">Hasta 5 profesionales</p>
       </a>
       <a href="/subscribe/clinica" class="border-2 border-slate-200 hover:border-blue-400 rounded-xl p-4 text-center transition-all">
         <p class="font-bold text-slate-800">Clínica</p>

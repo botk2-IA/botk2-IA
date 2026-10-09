@@ -40,6 +40,12 @@ def _run_migration():
         "ALTER TABLE appointments ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT ''",
         "ALTER TABLE patients ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT ''",
         "ALTER TABLE clinics ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMP",
+        "ALTER TABLE professionals ADD COLUMN IF NOT EXISTS slot_minutes INTEGER DEFAULT 30",
+        "ALTER TABLE professionals ADD COLUMN IF NOT EXISTS price VARCHAR(100) DEFAULT ''",
+        "ALTER TABLE clinics ADD COLUMN IF NOT EXISTS bot_welcome TEXT DEFAULT ''",
+        "ALTER TABLE clinics ADD COLUMN IF NOT EXISTS bot_info TEXT DEFAULT ''",
+        "ALTER TABLE clinics ADD COLUMN IF NOT EXISTS bot_confirm_note TEXT DEFAULT ''",
+        "ALTER TABLE clinics ADD COLUMN IF NOT EXISTS bot_days_ahead INTEGER DEFAULT 14",
         # El DNI cifrado no entra en VARCHAR(30)
         "ALTER TABLE patients ALTER COLUMN dni TYPE TEXT",
     ]
@@ -820,6 +826,7 @@ def appointment_create(
     duration_min: int = Form(30),
     reason: str = Form(""),
     notes: str = Form(""),
+    repeat_weeks: int = Form(0),
     redirect_to: str = Form(""),
     db: Session = Depends(database.get_db),
     clinic: models.Clinic = Depends(auth_module.get_current_clinic),
@@ -827,10 +834,17 @@ def appointment_create(
     if not _check_appointment_limit(clinic, db):
         return RedirectResponse("/pricing?limit=appointments", status_code=302)
 
+    # La duración sale de la configuración del profesional (turnos de 30 min, 1 hora, etc.)
+    prof = None
+    if professional_id:
+        prof = db.query(models.Professional).filter_by(id=professional_id, clinic_id=clinic.id).first()
+    if prof:
+        duration_min = chatbot.slot_minutes(prof)
+
     appointment = models.Appointment(
         clinic_id=clinic.id,
         patient_id=patient_id,
-        professional_id=professional_id or None,
+        professional_id=prof.id if prof else None,
         date=date_str,
         time=time_str,
         duration_min=duration_min,
@@ -840,9 +854,77 @@ def appointment_create(
     )
     db.add(appointment)
     db.commit()
+
+    # Sesiones: repetir el turno el mismo día de la semana y a la misma hora
+    repeat_weeks = max(0, min(repeat_weeks, MAX_REPEAT_WEEKS))
+    repeated, skipped = 0, 0
+    if repeat_weeks:
+        base = date.fromisoformat(date_str)
+        for week in range(1, repeat_weeks + 1):
+            next_date = (base + timedelta(days=7 * week)).isoformat()
+            ocupado = prof and chatbot.slot_ocupado(db, clinic.id, prof.id, next_date, time_str, duration_min)
+            if ocupado or not _check_appointment_limit(clinic, db):
+                skipped += 1
+                continue
+            db.add(models.Appointment(
+                clinic_id=clinic.id,
+                patient_id=patient_id,
+                professional_id=prof.id if prof else None,
+                date=next_date,
+                time=time_str,
+                duration_min=duration_min,
+                reason=reason,
+                notes=notes,
+                status="pending",
+            ))
+            db.commit()
+            repeated += 1
+
     if redirect_to and redirect_to.startswith("/"):
         return RedirectResponse(redirect_to, status_code=302)
-    return RedirectResponse(f"/appointments?date_filter={date_str}", status_code=302)
+    extra = f"&repeated={repeated}&skipped={skipped}" if repeat_weeks else ""
+    return RedirectResponse(f"/appointments?date_filter={date_str}{extra}", status_code=302)
+
+
+MAX_REPEAT_WEEKS = 12
+
+
+@app.post("/appointments/{appt_id}/reschedule")
+def appointment_reschedule(
+    appt_id: int,
+    date_str: str = Form(..., alias="date"),
+    time_str: str = Form(..., alias="time"),
+    professional_id: int = Form(None),
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    """Mueve un turno a otra fecha, hora y/o profesional."""
+    appt = db.query(models.Appointment).filter_by(id=appt_id, clinic_id=clinic.id).first()
+    if not appt:
+        return RedirectResponse("/appointments", status_code=302)
+
+    prof = None
+    if professional_id:
+        prof = db.query(models.Professional).filter_by(id=professional_id, clinic_id=clinic.id, active=True).first()
+    duration = chatbot.slot_minutes(prof) if prof else (appt.duration_min or 30)
+
+    try:
+        date.fromisoformat(date_str)
+        ocupado = prof and chatbot.slot_ocupado(db, clinic.id, prof.id, date_str, time_str, duration, exclude_appt_id=appt.id)
+    except ValueError:
+        return RedirectResponse(f"/appointments?date_filter={appt.date}", status_code=302)
+    if ocupado:
+        return RedirectResponse(f"/appointments?date_filter={appt.date}&conflict=1", status_code=302)
+
+    appt.date = date_str
+    appt.time = time_str
+    appt.professional_id = prof.id if prof else None
+    appt.duration_min = duration
+    appt.reminder_sent = False
+    if appt.status == "cancelled":
+        appt.status = "pending"
+    db.commit()
+    return RedirectResponse(f"/appointments?date_filter={date_str}&rescheduled=1", status_code=302)
 
 
 @app.post("/appointments/{appt_id}/status")
@@ -948,6 +1030,8 @@ def professional_schedule(
     work_days: str = Form(""),
     work_start: str = Form("09:00"),
     work_end: str = Form("18:00"),
+    slot_minutes: int = Form(30),
+    price: str = Form(""),
     db: Session = Depends(database.get_db),
     clinic: models.Clinic = Depends(auth_module.get_current_clinic),
 ):
@@ -956,6 +1040,8 @@ def professional_schedule(
         prof.work_days  = work_days
         prof.work_start = work_start
         prof.work_end   = work_end
+        prof.slot_minutes = slot_minutes if slot_minutes in chatbot.SLOT_OPCIONES else chatbot.SLOT_DEFAULT
+        prof.price      = price.strip()[:100]
         db.commit()
     return RedirectResponse("/professionals", status_code=302)
 
@@ -1070,6 +1156,8 @@ def settings_page(
         "wa_phone_id": wa_phone_id,
         "wa_token_set": bool(wa_token),
         "webhook_url": webhook_url,
+        "bot_days_options": BOT_DAYS_AHEAD_OPTIONS,
+        "bot_days_ahead": chatbot.dias_ventana(clinic),
     })
 
 
@@ -1095,6 +1183,27 @@ def settings_save(
         clinic.wa_token = wa_token.strip()
     db.commit()
     return RedirectResponse("/settings?saved=1", status_code=302)
+
+
+BOT_DAYS_AHEAD_OPTIONS = (7, 14, 21, 30, 60, 90)
+
+
+@app.post("/settings/bot")
+def settings_bot_save(
+    bot_welcome: str = Form(""),
+    bot_info: str = Form(""),
+    bot_confirm_note: str = Form(""),
+    bot_days_ahead: int = Form(14),
+    db: Session = Depends(database.get_db),
+    clinic: models.Clinic = Depends(auth_module.get_current_clinic),
+):
+    """Textos y opciones con los que cada clínica personaliza su bot de WhatsApp."""
+    clinic.bot_welcome      = bot_welcome.strip()[:500]
+    clinic.bot_info         = bot_info.strip()[:1500]
+    clinic.bot_confirm_note = bot_confirm_note.strip()[:500]
+    clinic.bot_days_ahead   = bot_days_ahead if bot_days_ahead in BOT_DAYS_AHEAD_OPTIONS else 14
+    db.commit()
+    return RedirectResponse("/settings?saved=1#bot", status_code=302)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

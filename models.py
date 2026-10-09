@@ -25,6 +25,11 @@ class Clinic(Base):
     wa_phone_id      = Column(String(100), default="")   # WhatsApp Phone ID por clínica
     wa_token         = Column(EncryptedText, default="")  # WhatsApp Token por clínica (cifrado)
     onboarding_done  = Column(Boolean, default=False)
+    # Personalización del bot de WhatsApp
+    bot_welcome      = Column(Text, default="")           # saludo inicial (vacío = saludo estándar)
+    bot_info         = Column(Text, default="")           # precios, obras sociales, indicaciones, etc.
+    bot_confirm_note = Column(Text, default="")           # texto extra al confirmar un turno
+    bot_days_ahead   = Column(Integer, default=14)        # con cuántos días de anticipación ofrece turnos
     created_at       = Column(DateTime(timezone=True), server_default=func.now())
 
     patients      = relationship("Patient",      back_populates="clinic")
@@ -63,6 +68,8 @@ class Professional(Base):
     work_days  = Column(String(20), default="0,1,2,3,4")   # 0=Lun..6=Dom
     work_start = Column(String(10), default="09:00")
     work_end   = Column(String(10), default="18:00")
+    slot_minutes = Column(Integer, default=30)          # duración de cada turno: 15, 20, 30, 45 o 60
+    price      = Column(String(100), default="")        # valor de la consulta que informa el bot (opcional)
 
     clinic       = relationship("Clinic",      back_populates="professionals")
     appointments = relationship("Appointment", back_populates="professional")

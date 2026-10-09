@@ -38,11 +38,16 @@
         {% for d in dias_trabajo %}{{ dias_map[d] }}{% if not loop.last %} · {% endif %}{% endfor %}
       </p>
       <p>{{ p.work_start or "09:00" }} a {{ p.work_end or "18:00" }}</p>
+      <p>Turnos de {{ "1 hora" if (p.slot_minutes or 30) == 60 else (p.slot_minutes or 30) ~ " minutos" }}</p>
+      {% if p.price %}<p>Consulta: {{ p.price }}</p>{% endif %}
     </div>
 
     <div class="flex gap-2 mt-3">
       <a href="/appointments" class="btn-outline flex-1 text-xs text-center">Ver agenda →</a>
-      <button onclick="openSchedule({{ p.id }}, '{{ p.work_days or '0,1,2,3,4' }}', '{{ p.work_start or '09:00' }}', '{{ p.work_end or '18:00' }}')" class="btn-outline text-xs px-3">Horario</button>
+      <button onclick="openSchedule(this)" class="btn-outline text-xs px-3"
+              data-id="{{ p.id }}" data-days="{{ p.work_days or '0,1,2,3,4' }}"
+              data-start="{{ p.work_start or '09:00' }}" data-end="{{ p.work_end or '18:00' }}"
+              data-slot="{{ p.slot_minutes or 30 }}" data-price="{{ p.price or '' }}">Horario</button>
       <form method="post" action="/professionals/{{ p.id }}/delete" onsubmit="return confirm('¿Eliminar profesional?')" style="display:inline">{{ csrf_input(request) }}
         <button type="submit" class="bg-red-100 text-red-700 text-xs font-semibold px-3 py-1.5 rounded hover:bg-red-200 transition-colors border-0 cursor-pointer">✕</button>
       </form>
@@ -111,6 +116,22 @@
           <input type="time" name="work_end" id="input-work-end" class="form-input"/>
         </div>
       </div>
+      <div>
+        <label class="form-label">Duración de cada turno</label>
+        <select name="slot_minutes" id="input-slot-minutes" class="form-input">
+          <option value="15">15 minutos</option>
+          <option value="20">20 minutos</option>
+          <option value="30">30 minutos (media hora)</option>
+          <option value="45">45 minutos</option>
+          <option value="60">1 hora</option>
+        </select>
+        <p class="text-xs text-slate-400 mt-1">El bot ofrece los horarios con esta separación.</p>
+      </div>
+      <div>
+        <label class="form-label">Valor de la consulta (opcional)</label>
+        <input name="price" id="input-price" maxlength="100" placeholder="Ej: $25.000 · Obras sociales sin cargo" class="form-input"/>
+        <p class="text-xs text-slate-400 mt-1">Si lo completás, el bot lo informa al paciente antes de confirmar el turno.</p>
+      </div>
       <div class="flex gap-3 pt-1">
         <button type="submit" class="btn-primary flex-1">Guardar horario</button>
         <button type="button" onclick="document.getElementById('modal-schedule').classList.add('hidden')" class="btn-outline">Cancelar</button>
@@ -122,16 +143,19 @@
 
 {% block scripts %}
 <script>
-function openSchedule(profId, workDays, workStart, workEnd) {
+function openSchedule(btn) {
+  const d = btn.dataset;
   // Set form action
-  document.getElementById('form-schedule').action = '/professionals/' + profId + '/schedule';
+  document.getElementById('form-schedule').action = '/professionals/' + d.id + '/schedule';
 
   // Set time inputs
-  document.getElementById('input-work-start').value = workStart;
-  document.getElementById('input-work-end').value = workEnd;
+  document.getElementById('input-work-start').value = d.start;
+  document.getElementById('input-work-end').value = d.end;
+  document.getElementById('input-slot-minutes').value = d.slot;
+  document.getElementById('input-price').value = d.price;
 
   // Set checkboxes
-  const diasActivos = workDays.split(',');
+  const diasActivos = d.days.split(',');
   document.querySelectorAll('.dia-check').forEach(cb => {
     cb.checked = diasActivos.includes(cb.value);
   });
