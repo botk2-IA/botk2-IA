@@ -21,6 +21,7 @@ import auth as auth_module
 import reminders as reminders_module
 import csrf as csrf_module
 import backup as backup_module
+import crypto as crypto_module
 from apscheduler.schedulers.background import BackgroundScheduler
 
 # ── Inicialización ────────────────────────────────────────────────────────────
@@ -39,6 +40,8 @@ def _run_migration():
         "ALTER TABLE appointments ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT ''",
         "ALTER TABLE patients ADD COLUMN IF NOT EXISTS notes TEXT DEFAULT ''",
         "ALTER TABLE clinics ADD COLUMN IF NOT EXISTS plan_expires_at TIMESTAMP",
+        # El DNI cifrado no entra en VARCHAR(30)
+        "ALTER TABLE patients ALTER COLUMN dni TYPE TEXT",
     ]
     is_sqlite = database.engine.dialect.name == "sqlite"
     with database.engine.connect() as conn:
@@ -53,6 +56,7 @@ def _run_migration():
                 conn.rollback()
                 print(f"[Migration] skipped: {e}")
 _run_migration()
+crypto_module.prepare_database(database.engine)
 
 _scheduler = BackgroundScheduler(timezone="America/Argentina/Buenos_Aires")
 

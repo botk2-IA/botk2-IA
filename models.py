@@ -6,6 +6,7 @@ from sqlalchemy import Column, Integer, String, Boolean, Text, DateTime, Foreign
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
+from crypto import EncryptedText
 
 
 class Clinic(Base):
@@ -22,7 +23,7 @@ class Clinic(Base):
     plan_expires_at  = Column(DateTime, nullable=True)      # UTC; None = sin vencimiento (free o asignado por admin)
     active           = Column(Boolean, default=True)
     wa_phone_id      = Column(String(100), default="")   # WhatsApp Phone ID por clínica
-    wa_token         = Column(Text, default="")           # WhatsApp Token por clínica
+    wa_token         = Column(EncryptedText, default="")  # WhatsApp Token por clínica (cifrado)
     onboarding_done  = Column(Boolean, default=False)
     created_at       = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -39,10 +40,10 @@ class Patient(Base):
     name        = Column(String(200), nullable=False)
     phone       = Column(String(50), default="")
     email       = Column(String(200), default="")
-    dni         = Column(String(30), default="")
+    dni         = Column(EncryptedText, default="")   # cifrado
     birth_date  = Column(String(20), default="")
     insurance   = Column(String(100), default="")   # obra social / prepaga
-    notes       = Column(Text, default="")
+    notes       = Column(EncryptedText, default="")   # cifrado
     active      = Column(Boolean, default=True)
     created_at  = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -78,13 +79,13 @@ class Appointment(Base):
     time            = Column(String(10), nullable=False)   # HH:MM
     duration_min    = Column(Integer, default=30)
     reason          = Column(String(300), default="")
-    notes           = Column(Text, default="")
+    notes           = Column(EncryptedText, default="")   # cifrado
     status          = Column(String(30), default="pending")  # pending|confirmed|completed|cancelled
     reminder_sent   = Column(Boolean, default=False)
-    # Historia clínica
-    diagnostico     = Column(Text, default="")
-    observaciones   = Column(Text, default="")
-    receta          = Column(Text, default="")
+    # Historia clínica (cifrada)
+    diagnostico     = Column(EncryptedText, default="")
+    observaciones   = Column(EncryptedText, default="")
+    receta          = Column(EncryptedText, default="")
     created_at      = Column(DateTime(timezone=True), server_default=func.now())
 
     clinic       = relationship("Clinic",       back_populates="appointments")

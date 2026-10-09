@@ -74,3 +74,20 @@ El archivo contiene datos de salud de pacientes y credenciales: no lo mandes por
 - Cada pago acreditado activa el plan por 30 días; un pago del mismo plan antes del vencimiento suma 30 días más.
 - Al vencer, la clínica pasa sola al plan Free (se revisa cada hora) y recibe un email de aviso 3 días antes.
 - Un plan asignado a mano desde `/admin` no tiene vencimiento.
+
+## Cifrado de datos sensibles
+La app cifra en la base el DNI, las notas, el diagnóstico, las observaciones, la receta y el token de WhatsApp de cada clínica. Nombre, teléfono y email quedan sin cifrar porque se usan para buscar pacientes y para que el bot los reconozca.
+
+Para activarlo:
+1. **Hacé un backup antes** (botón "Descargar backup" en `/admin`).
+2. Generá la clave:
+   ```bash
+   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+   ```
+3. **Guardá la clave en un gestor de contraseñas.** Si se pierde, los datos cifrados no se pueden recuperar.
+4. Cargala en Railway como `DATA_ENCRYPTION_KEY`. En el siguiente arranque la app cifra sola todo lo existente (en los logs aparece `[Cifrado] N valores existentes cifrados`).
+
+A tener en cuenta:
+- Sin la variable, la app funciona igual y guarda en texto plano.
+- Una vez activado, si la variable falta o cambia, la app **no arranca** (a propósito, para no mostrar ni pisar datos ilegibles). Railway deja funcionando la versión anterior.
+- El archivo de "Descargar backup" contiene los datos descifrados: tratalo como confidencial.
