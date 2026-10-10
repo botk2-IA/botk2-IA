@@ -1033,6 +1033,24 @@ def professional_delete(
     return RedirectResponse("/professionals", status_code=302)
 
 
+def _format_price(raw: str) -> str:
+    """
+    Si el valor empieza con un número, le agrega el signo $ y los puntos de miles:
+    "30000" → "$30.000", "30000 efectivo" → "$30.000 efectivo".
+    Un texto que no empieza con un número se guarda como está.
+    """
+    import re
+    text = raw.strip()
+    match = re.match(r"^\$?\s*(\d[\d.]*)(,\d{1,2})?(.*)$", text, re.S)
+    if not match:
+        return text
+    entero, decimales, resto = match.group(1), match.group(2) or "", match.group(3)
+    digits = entero.replace(".", "")
+    if not digits:
+        return text
+    return f"${int(digits):,}".replace(",", ".") + decimales + resto
+
+
 @app.post("/professionals/{prof_id}/schedule")
 def professional_schedule(
     prof_id: int,
@@ -1050,7 +1068,7 @@ def professional_schedule(
         prof.work_start = work_start
         prof.work_end   = work_end
         prof.slot_minutes = slot_minutes if slot_minutes in chatbot.SLOT_OPCIONES else chatbot.SLOT_DEFAULT
-        prof.price      = price.strip()[:100]
+        prof.price      = _format_price(price)[:100]
         db.commit()
     return RedirectResponse("/professionals", status_code=302)
 
