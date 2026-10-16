@@ -10,6 +10,7 @@ su propio estado de conversación guardado en memoria.
 Estados:
   INICIO           → Saludo y menú principal
   MENU             → Esperando que elija 1, 2 o 3
+  PACIENTE_LISTA   → Eligiendo para quién es el turno (el mismo número puede ser de una familia)
   ESPECIALIDAD_LISTA → Eligiendo especialidad (Odontología, Kinesiología, etc.)
   PROF_LISTA       → Eligiendo profesional (solo si hay más de uno en la especialidad)
   FECHA_LISTA      → Eligiendo fecha disponible
@@ -18,9 +19,10 @@ Estados:
   CANCELAR_LISTA   → Eligiendo turno a cancelar
   REPROGRAMAR_LISTA → Eligiendo turno a reprogramar (después sigue por FECHA/HORA/CONFIRMAR)
   REPETIR_CANTIDAD → Eligiendo cuántas semanas repetir el turno recién sacado
-  NOMBRE           → Pidiendo nombre (paciente nuevo)
+  NOMBRE           → Pidiendo nombre y apellido del paciente (paciente nuevo)
 """
 
+import re
 from datetime import date, timedelta, datetime
 from sqlalchemy.orm import Session
 import models
@@ -179,24 +181,67 @@ def _fecha_legible(fecha_iso: str) -> str:
     return f"{nombre_dia} {d.day:02d}/{d.month:02d}"
 
 
-def _find_or_create_patient(db: Session, clinic_id: int, phone: str, name: str) -> models.Patient:
-    """Busca el paciente por teléfono, si no existe lo crea."""
-    # Normalizar teléfono
-    clean = phone.replace("whatsapp:", "").replace("+", "").strip()
-    patient = db.query(models.Patient).filter(
+def phone_key(phone: str) -> str:
+    """
+    Número argentino normalizado a código de área + número (10 dígitos), para
+    comparar teléfonos escritos de formas distintas:
+    "whatsapp:+5491128280367", "+54 9 11 2828-0367", "011 15 2828-0367" y
+    "11 2828 0367" dan todos "1128280367".
+    """
+    digits = re.sub(r"\D", "", phone or "")
+    if digits.startswith("54") and len(digits) > 11:
+        digits = digits[2:]
+        if digits.startswith("9"):
+            digits = digits[1:]
+    digits = digits.lstrip("0")
+    # Formato local con "15" después del código de área (2, 3 o 4 dígitos)
+    if len(digits) == 12:
+        for n in (2, 3, 4):
+            if digits[n:n + 2] == "15":
+                digits = digits[:n] + digits[n + 2:]
+                break
+    return digits[-10:]
+
+
+def pacientes_del_telefono(db: Session, clinic_id: int, phone: str) -> list:
+    """
+    Pacientes activos de la clínica con exactamente este teléfono. Puede haber
+    varios: una misma persona saca turnos para toda su familia desde su WhatsApp.
+    Los pacientes eliminados desde el panel no se tienen en cuenta.
+    """
+    key = phone_key(phone)
+    if len(key) < 8:
+        return []
+    candidatos = db.query(models.Patient).filter(
         models.Patient.clinic_id == clinic_id,
-        models.Patient.phone.contains(clean[-8:]),  # últimos 8 dígitos
-    ).first()
-    if not patient:
-        patient = models.Patient(
-            clinic_id=clinic_id,
-            name=name,
-            phone=phone.replace("whatsapp:", ""),
-            active=True,
-        )
-        db.add(patient)
-        db.commit()
-        db.refresh(patient)
+        models.Patient.active == True,
+        models.Patient.phone != "",
+        models.Patient.phone.isnot(None),
+    ).order_by(models.Patient.name).all()
+    return [p for p in candidatos if phone_key(p.phone) == key]
+
+
+def buscar_paciente(db: Session, clinic_id: int, phone: str):
+    """Primer paciente activo con este teléfono, o None."""
+    pacientes = pacientes_del_telefono(db, clinic_id, phone)
+    return pacientes[0] if pacientes else None
+
+
+def _find_or_create_patient(db: Session, clinic_id: int, phone: str, name: str) -> models.Patient:
+    """Busca un paciente con este teléfono y este nombre; si no existe lo crea."""
+    nombre = " ".join(name.split()).lower()
+    for p in pacientes_del_telefono(db, clinic_id, phone):
+        if " ".join((p.name or "").split()).lower() == nombre:
+            return p
+    patient = models.Patient(
+        clinic_id=clinic_id,
+        name=name,
+        phone=phone.replace("whatsapp:", ""),
+        active=True,
+    )
+    db.add(patient)
+    db.commit()
+    db.refresh(patient)
     return patient
 
 
@@ -232,16 +277,12 @@ def process_message(phone: str, text: str, db: Session, clinic_id: int) -> str:
 
     # Respuesta al recordatorio: SI confirma, NO cancela — solo en estado INICIO
     if s["state"] == "INICIO" and text_lower in ["si", "sí", "yes", "confirmo", "confirmar", "no", "no puedo", "no voy"]:
-        clean = phone.replace("whatsapp:", "").replace("+", "").strip()
-        patient_rem = db.query(models.Patient).filter(
-            models.Patient.clinic_id == clinic_id,
-            models.Patient.phone.contains(clean[-8:]),
-        ).first()
-        if patient_rem:
+        pacientes_rem = pacientes_del_telefono(db, clinic_id, phone)
+        if pacientes_rem:
             from datetime import timedelta as _td, date as _dt2
             tomorrow = (_dt2.today() + _td(days=1)).isoformat()
             appt_rem = db.query(models.Appointment).filter(
-                models.Appointment.patient_id == patient_rem.id,
+                models.Appointment.patient_id.in_([p.id for p in pacientes_rem]),
                 models.Appointment.date == tomorrow,
                 models.Appointment.status.in_(["pending", "confirmed"]),
             ).order_by(models.Appointment.time).first()
@@ -308,7 +349,7 @@ def process_message(phone: str, text: str, db: Session, clinic_id: int) -> str:
     # ── ESTADO: MENÚ PRINCIPAL ────────────────────────────────────────────────
     if s["state"] == "MENU":
         if text == "1":
-            return _iniciar_eleccion_profesional(db, s, clinic_id)
+            return _preguntar_paciente(db, s, clinic_id, phone)
 
         elif text == "2":
             s["state"] = "CANCELAR_LISTA"
@@ -329,6 +370,26 @@ def process_message(phone: str, text: str, db: Session, clinic_id: int) -> str:
                 "No entendí 😅 Por favor elegí una opción:\n\n"
                 + _opciones_menu(db, clinic)
             )
+
+    # ── ESTADO: PARA QUIÉN ES EL TURNO ────────────────────────────────────────
+    if s["state"] == "PACIENTE_LISTA":
+        opcion = s["opciones"].get(text)
+        if not opcion:
+            return f"Por favor elegí un número válido del 1 al {len(s['opciones'])} 👆"
+        if opcion.get("nuevo"):
+            s["state"] = "NOMBRE"
+            return "📝 Escribí el *nombre y apellido* de la persona que va a atenderse."
+        s["patient_id"] = opcion["id"]
+        s["patient_name"] = opcion["name"]
+        return _iniciar_eleccion_profesional(db, s, clinic_id)
+
+    # ── ESTADO: PEDIR NOMBRE (paciente nuevo) ─────────────────────────────────
+    if s["state"] == "NOMBRE":
+        if len(text) < 3 or text.isdigit():
+            return "Por favor escribí el nombre y apellido de la persona que va a atenderse 😊"
+        s["patient_id"] = None
+        s["patient_name"] = " ".join(text.split()).title()
+        return f"👤 Turno para *{s['patient_name']}*.\n\n" + _iniciar_eleccion_profesional(db, s, clinic_id)
 
     # ── ESTADO: ELEGIR ESPECIALIDAD ───────────────────────────────────────────
     if s["state"] == "ESPECIALIDAD_LISTA":
@@ -379,32 +440,10 @@ def process_message(phone: str, text: str, db: Session, clinic_id: int) -> str:
             return f"Por favor elegí un número válido del 1 al {len(s['opciones'])} 👆"
         s["hora"] = opcion["hora"]
 
-        # Reprogramación: el paciente ya se conoce por el turno original
-        if s.get("reprogramar_appt_id"):
-            s["state"] = "CONFIRMAR"
-            return _mostrar_confirmacion(db, s)
-
-        # Verificar si el paciente ya existe
-        clean = phone.replace("whatsapp:", "").replace("+", "").strip()
-        patient = db.query(models.Patient).filter(
-            models.Patient.clinic_id == clinic_id,
-            models.Patient.phone.contains(clean[-8:]),
-        ).first()
-
-        if patient:
-            s["patient_id"] = patient.id
-            s["patient_name"] = patient.name
-            s["state"] = "CONFIRMAR"
-            return _mostrar_confirmacion(db, s)
-        else:
+        # El paciente ya se eligió al empezar (o viene del turno que se reprograma)
+        if not s.get("patient_name"):
             s["state"] = "NOMBRE"
-            return "📝 Para registrarte, ¿cuál es tu nombre completo?"
-
-    # ── ESTADO: PEDIR NOMBRE (paciente nuevo) ─────────────────────────────────
-    if s["state"] == "NOMBRE":
-        if len(text) < 3:
-            return "Por favor ingresá tu nombre completo 😊"
-        s["patient_name"] = text.title()
+            return "📝 Escribí el *nombre y apellido* de la persona que va a atenderse."
         s["state"] = "CONFIRMAR"
         return _mostrar_confirmacion(db, s)
 
@@ -450,8 +489,12 @@ def process_message(phone: str, text: str, db: Session, clinic_id: int) -> str:
                     f"Te vamos a mandar un recordatorio el día anterior."
                 )
 
-            # Crear o encontrar paciente
-            patient = _find_or_create_patient(db, clinic_id, phone, s["patient_name"])
+            # Paciente elegido de la lista, o uno nuevo con este teléfono
+            patient = None
+            if s.get("patient_id"):
+                patient = next((p for p in pacientes_del_telefono(db, clinic_id, phone) if p.id == s["patient_id"]), None)
+            if not patient:
+                patient = _find_or_create_patient(db, clinic_id, phone, s["patient_name"])
             s["patient_id"] = patient.id
 
             # Crear el turno
@@ -695,6 +738,29 @@ def _detalle_turno(appt) -> str:
     )
 
 
+def _preguntar_paciente(db: Session, s: dict, clinic_id: int, phone: str) -> str:
+    """Primer paso al sacar un turno: para quién es (el número puede ser de una familia)."""
+    pacientes = pacientes_del_telefono(db, clinic_id, phone)
+    s["patient_id"] = None
+    s["patient_name"] = None
+    if not pacientes:
+        s["state"] = "NOMBRE"
+        return (
+            "👤 ¿Para quién es el turno?\n\n"
+            "Escribí el *nombre y apellido* de la persona que va a atenderse."
+        )
+    s["state"] = "PACIENTE_LISTA"
+    s["opciones"] = {}
+    msg = "👤 ¿Para quién es el turno?\n\n"
+    for i, p in enumerate(pacientes, 1):
+        s["opciones"][str(i)] = {"id": p.id, "name": p.name}
+        msg += f"{i}️⃣ {p.name}\n"
+    otro = str(len(pacientes) + 1)
+    s["opciones"][otro] = {"nuevo": True}
+    msg += f"{otro}️⃣ Otra persona\n\nRespondé con el número 👆"
+    return msg
+
+
 def _iniciar_eleccion_profesional(db: Session, s: dict, clinic_id: int) -> str:
     """Arranca el flujo especialidad → profesional → fecha."""
     profesionales = db.query(models.Professional).filter_by(
@@ -860,15 +926,12 @@ def _resumen_turno(db: Session, s: dict, con_paciente: bool = True) -> str:
 
 
 def _mostrar_turnos_paciente(phone: str, db: Session, clinic_id: int, s: dict, solo_ver: bool = False, reprogramar: bool = False) -> str:
-    clean = phone.replace("whatsapp:", "").replace("+", "").strip()
-    patient = db.query(models.Patient).filter(
-        models.Patient.clinic_id == clinic_id,
-        models.Patient.phone.contains(clean[-8:]),
-    ).first()
+    pacientes = pacientes_del_telefono(db, clinic_id, phone)
+    nombres = {p.id: p.name for p in pacientes}
 
     accion = "reprogramar" if reprogramar else "cancelar"
 
-    if not patient:
+    if not pacientes:
         s["state"] = "MENU"
         if solo_ver:
             return "📋 No encontré turnos registrados con tu número.\n\nEscribí *1* para sacar un turno."
@@ -877,7 +940,7 @@ def _mostrar_turnos_paciente(phone: str, db: Session, clinic_id: int, s: dict, s
 
     hoy = date.today().isoformat()
     turnos = db.query(models.Appointment).filter(
-        models.Appointment.patient_id == patient.id,
+        models.Appointment.patient_id.in_(list(nombres)),
         models.Appointment.clinic_id == clinic_id,
         models.Appointment.date >= hoy,
         models.Appointment.status.in_(["pending", "confirmed"]),
@@ -891,8 +954,10 @@ def _mostrar_turnos_paciente(phone: str, db: Session, clinic_id: int, s: dict, s
             return f"📋 No tenés turnos activos para {accion}.\n\nEscribí *1* para sacar un turno."
 
     if solo_ver:
-        msg = f"📋 *Tus próximos turnos, {patient.name}:*\n\n"
+        msg = "📋 *Próximos turnos de este número:*\n\n" if len(pacientes) > 1 else f"📋 *Tus próximos turnos, {pacientes[0].name}:*\n\n"
         for t in turnos:
+            if len(pacientes) > 1:
+                msg += f"👤 *{nombres.get(t.patient_id, '')}*\n"
             msg += _detalle_turno(t) + "\n\n"
         msg += "Escribí *hola* si necesitás algo más."
         s["state"] = "INICIO"
@@ -904,6 +969,7 @@ def _mostrar_turnos_paciente(phone: str, db: Session, clinic_id: int, s: dict, s
             prof = t.professional.name if t.professional else "Profesional a confirmar"
             esp = t.professional.specialty if t.professional and t.professional.specialty else "General"
             s["opciones"][str(i)] = {"appt_id": t.id}
-            msg += f"🔵 *{i}.* {_fecha_legible(t.date)} · {t.time} hs\n      {prof} · {esp}\n"
+            quien = f"      👤 {nombres.get(t.patient_id, '')}\n" if len(pacientes) > 1 else ""
+            msg += f"🔵 *{i}.* {_fecha_legible(t.date)} · {t.time} hs\n      {prof} · {esp}\n{quien}"
         msg += f"\n🔵 *0.* Volver\n\nElegí el número del turno a {accion}."
         return msg
